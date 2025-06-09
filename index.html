@@ -276,7 +276,7 @@
                     <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8 text-gray-300">
                         <div class="flex items-center gap-2"><i class="fas fa-play-circle text-green-400"></i><span>تاریخ شروع: ${startDate}</span></div>
                         <div class="flex items-center gap-2"><i class="fas fa-stop-circle text-red-400"></i><span>تاریخ پایان: ${endDate}</span></div>
-                        <div class="flex items-center gap-2"><i class="fas fa-phone-alt text-indigo-400"></i><span>شماره مربی: ${trainerPhone}</span></div>
+                        <div class="flex items-center gap-2"><i class="fas fa-phone-alt text-indigo-400"></i><span>شماره مربی: <a href="tel:${trainerPhone}" class="hover:underline">${trainerPhone}</a></span></div>
                     </div>
                 </div>
                 <div class="card p-6 mb-8 shadow-lg">
@@ -294,7 +294,10 @@
                 </div>
                 <footer class="text-center mt-12 text-gray-400">
                     <p>باران رو میتونی این جا دنبال کنی <span class="text-lg">🥺❤️</span></p>
-                    <a href="#" class="text-indigo-400 hover:text-indigo-300 text-2xl mt-2 inline-block"><i class="fab fa-instagram"></i></a>
+                    <div class="flex justify-center gap-6 mt-4">
+                        <a href="https://www.instagram.com/lifebarani" target="_blank" rel="noopener noreferrer" class="text-pink-400 hover:text-pink-300 text-3xl transition-transform transform hover:scale-110"><i class="fab fa-instagram"></i></a>
+                        <a href="https://t.me/lifebarani" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 text-3xl transition-transform transform hover:scale-110"><i class="fab fa-telegram"></i></a>
+                    </div>
                 </footer>
             </div>
         `;
@@ -531,7 +534,7 @@
     }
 
     async function addNewAthlete(name) {
-        const newAthlete = { name: name, plan: { trainerName: "باران حیدری", trainerPhone: "09184280519", startDate: "", endDate: "", instructions: [], workoutDays: [{ day: "روز اول", exercises: [] }], importantNotes: [] } };
+        const newAthlete = { name: name, plan: { trainerName: "باران حیدری", trainerPhone: "09187231278", startDate: "", endDate: "", instructions: [], workoutDays: [{ day: "روز اول", exercises: [] }], importantNotes: [] } };
         try {
             const docRef = await addDoc(collection(db, "athletes"), newAthlete);
             showToast(`شاگرد "${name}" با موفقیت اضافه شد.`);
@@ -637,9 +640,7 @@
         renderAthleteList();
     }
 
-    // UPDATED: shareCurrentAthlete now uses the athlete's ID for the link
     async function shareCurrentAthlete() {
-        // First, save any unsaved changes to ensure the shared link has the latest data.
         await saveCurrentAthlete(false);
         if (!currentAthleteId) {
              showToast("لطفاً ابتدا یک شاگرد را انتخاب کنید.");
@@ -656,7 +657,6 @@
         document.getElementById('close-modal-btn').onclick = () => modal.classList.add('hidden');
     }
 
-    // UPDATED: handlePublicView fetches data based on the ID in the URL
     async function handlePublicView(athleteId) {
         appContainer.innerHTML = `<div class="h-screen flex items-center justify-center text-center"><p class="text-gray-400">در حال بارگذاری برنامه...</p></div>`;
         try {
@@ -678,15 +678,12 @@
 
 
     if(auth) {
-        // UPDATED: The entire startup logic is now cleaner.
         const urlParams = new URLSearchParams(window.location.search);
         const athleteId = urlParams.get('id');
 
         if (athleteId) {
-            // If an ID is in the URL, it's a public view. No auth needed.
             handlePublicView(athleteId);
         } else {
-            // If no ID, it's an attempt to access the admin panel. Check auth state.
             onAuthStateChanged(auth, (user) => {
                 if (user && user.email === ADMIN_EMAIL) {
                     console.log("Admin authenticated:", user.email);
