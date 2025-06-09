@@ -145,7 +145,7 @@
     <div id="share-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3 class="text-xl font-bold mb-4">اشتراک گذاری برنامه</h3>
-            <p class="text-gray-400 mb-4">این لینک را کپی کرده و برای شاگرد خود ارسال کنید.</p>
+            <p class="text-gray-400 mb-4">این لینک ثابت را کپی کرده و برای شاگرد خود ارسال کنید.</p>
             <div class="flex items-center gap-2">
                 <input type="text" id="share-link-input" readonly class="input-field text-left" dir="ltr">
                 <button id="copy-link-btn" class="btn btn-primary px-4"><i class="fas fa-copy"></i></button>
@@ -169,7 +169,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, getDoc, addDoc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDPGEJ55EGhwlrKm6uTsajsY-tBenX2byg",
@@ -262,7 +262,6 @@
         const { trainerName, athleteName, startDate, endDate, trainerPhone, instructions, workoutDays, importantNotes } = data;
         
         loginView.classList.add('hidden');
-        // FIXED: Added user-specific styles back
         const userStyles = `<style> .tab-active-user { background-color: #4f46e5 !important; color: #ffffff !important; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.5); } details > summary { list-style: none; } details > summary::-webkit-details-marker { display: none; } .table-responsive { display: block; width: 100%; overflow-x: auto; } </style>`;
         document.head.insertAdjacentHTML('beforeend', userStyles);
 
@@ -376,7 +375,6 @@
         });
     }
 
-    // FIXED: Added activeDayIndex parameter
     async function renderEditor(athlete, activeDayIndex = 0) {
         document.getElementById('welcome-screen').classList.add('hidden');
         const editorScreen = document.getElementById('editor-screen');
@@ -385,10 +383,8 @@
         const plan = athlete.plan || {};
         const workoutDays = plan.workoutDays || [];
         
-        // FIXED: Use activeDayIndex to set the active tab
         let tabsHtml = workoutDays.map((day, index) => `<button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === activeDayIndex ? 'tab-active-admin' : ''}" data-day="${index}">${day.day}</button>`).join('');
 
-        // FIXED: Use activeDayIndex to show the correct content
         let daysHtml = workoutDays.map((day, dayIndex) => {
             let exercises = day.exercises || [];
             let exercisesHtml = exercises.map((ex, exIndex) => `<tr class="exercise-row"><td class="p-2"><input type="text" class="input-field" value="${ex.name || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="name"></td><td class="p-2"><input type="text" class="input-field" value="${ex.sets || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="sets"></td><td class="p-2"><input type="text" class="input-field" value="${ex.desc || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="desc"></td><td class="p-2 text-center"><button class="btn btn-danger btn-sm px-3 py-1 remove-exercise-btn" data-day="${dayIndex}" data-ex="${exIndex}"><i class="fas fa-trash"></i></button></td></tr>`).join('');
@@ -413,13 +409,10 @@
         if (athlete) { currentAthleteId = id; renderAthleteList(); renderEditor(athlete); }
     }
 
-    // FIXED: Added helper for ordinal numbers
     function numberToPersianOrdinal(n) {
         const ordinals = ["اول", "دوم", "سوم", "چهارم", "پنجم", "ششم", "هفتم", "هشتم", "نهم", "دهم"];
-        if (n > 0 && n <= ordinals.length) {
-            return ordinals[n - 1];
-        }
-        return n; // Fallback to the number itself e.g., روز 11
+        if (n > 0 && n <= ordinals.length) return ordinals[n - 1];
+        return n;
     }
 
     function setupAdminEventListeners() {
@@ -458,7 +451,7 @@
 
                 if (dayTab) {
                     const dayIndex = parseInt(dayTab.dataset.day, 10);
-                    renderEditor(athlete, dayIndex); // Re-render with the correct active tab
+                    renderEditor(athlete, dayIndex);
                     return;
                 }
                 
@@ -491,7 +484,7 @@
                     const newDayIndex = athlete.plan.workoutDays.length;
                     const newDayName = `روز ${numberToPersianOrdinal(newDayIndex + 1)}`;
                     athlete.plan.workoutDays.push({ day: newDayName, exercises: [] });
-                    newActiveIndex = newDayIndex; // Set the new day as active
+                    newActiveIndex = newDayIndex;
                     modified = true;
                 }
                 
@@ -503,7 +496,6 @@
                         const athleteStateAfterConfirm = getEditorData();
                         if (athleteStateAfterConfirm.plan.workoutDays) {
                             athleteStateAfterConfirm.plan.workoutDays.splice(dayIndex, 1);
-                            // Update day names to be sequential again
                             athleteStateAfterConfirm.plan.workoutDays.forEach((day, index) => {
                                 day.day = `روز ${numberToPersianOrdinal(index + 1)}`;
                             });
@@ -602,7 +594,6 @@
             return; 
         }
         
-        // Ensure day names are sequential before saving
         if (updatedData.plan.workoutDays) {
             updatedData.plan.workoutDays.forEach((day, index) => {
                 day.day = `روز ${numberToPersianOrdinal(index + 1)}`;
@@ -646,61 +637,70 @@
         renderAthleteList();
     }
 
+    // UPDATED: shareCurrentAthlete now uses the athlete's ID for the link
     async function shareCurrentAthlete() {
-        const athlete = await saveCurrentAthlete(false);
-        if (!athlete) { showToast("ابتدا تغییرات را ذخیره کنید."); return; }
-        const planData = { ...athlete.plan, athleteName: athlete.name };
-        const encodedData = btoa(encodeURIComponent(JSON.stringify(planData)));
-        const shareLink = `${window.location.origin}${window.location.pathname}?plan=${encodedData}`;
+        // First, save any unsaved changes to ensure the shared link has the latest data.
+        await saveCurrentAthlete(false);
+        if (!currentAthleteId) {
+             showToast("لطفاً ابتدا یک شاگرد را انتخاب کنید.");
+             return;
+        }
+        
+        const shareLink = `${window.location.origin}${window.location.pathname}?id=${currentAthleteId}`;
+        
         const modal = document.getElementById('share-modal');
         const linkInput = document.getElementById('share-link-input');
         linkInput.value = shareLink;
         modal.classList.remove('hidden');
-        document.getElementById('copy-link-btn').onclick = () => { linkInput.select(); document.execCommand('copy'); showToast('کپی شد!');};
+        document.getElementById('copy-link-btn').onclick = () => { linkInput.select(); document.execCommand('copy'); showToast('لینک کپی شد!');};
         document.getElementById('close-modal-btn').onclick = () => modal.classList.add('hidden');
     }
 
-    function startApp() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const planDataParam = urlParams.get('plan');
-        if (planDataParam) {
-            try {
-                const decodedJson = decodeURIComponent(atob(planDataParam));
-                const planData = JSON.parse(decodedJson);
+    // UPDATED: handlePublicView fetches data based on the ID in the URL
+    async function handlePublicView(athleteId) {
+        appContainer.innerHTML = `<div class="h-screen flex items-center justify-center text-center"><p class="text-gray-400">در حال بارگذاری برنامه...</p></div>`;
+        try {
+            const athleteRef = doc(db, "athletes", athleteId);
+            const docSnap = await getDoc(athleteRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const planData = { ...data.plan, athleteName: data.name };
                 renderUserView(planData);
-            } catch (error) {
-                console.error("Failed to parse plan data from URL:", error);
-                renderLoginView(); 
-            }
-        } else {
-            if (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) {
-                renderAdminPanel();
             } else {
-                renderLoginView();
+                appContainer.innerHTML = `<div class="h-screen flex items-center justify-center text-center"><h1 class="text-2xl font-bold text-red-500">برنامه یافت نشد</h1><p class="text-gray-400">ممکن است لینک اشتباه باشد یا برنامه حذف شده باشد.</p></div>`;
             }
+        } catch (error) {
+            console.error("Error fetching public plan:", error);
+            appContainer.innerHTML = `<div class="h-screen flex items-center justify-center text-center"><h1 class="text-2xl font-bold text-red-500">خطا در بارگذاری</h1><p class="text-gray-400">لطفاً اتصال اینترنت خود را بررسی کرده و دوباره تلاش کنید.</p></div>`;
         }
     }
 
-    if(auth) {
-        onAuthStateChanged(auth, (user) => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('plan')) {
-                startApp();
-                return;
-            }
 
-            if (user && user.email === ADMIN_EMAIL) {
-                console.log("Admin authenticated:", user.email);
-                startApp();
-            } else {
-                if (user) { 
-                    console.log("Unauthorized user. Signing out.", user.email);
-                    signOut(auth); 
+    if(auth) {
+        // UPDATED: The entire startup logic is now cleaner.
+        const urlParams = new URLSearchParams(window.location.search);
+        const athleteId = urlParams.get('id');
+
+        if (athleteId) {
+            // If an ID is in the URL, it's a public view. No auth needed.
+            handlePublicView(athleteId);
+        } else {
+            // If no ID, it's an attempt to access the admin panel. Check auth state.
+            onAuthStateChanged(auth, (user) => {
+                if (user && user.email === ADMIN_EMAIL) {
+                    console.log("Admin authenticated:", user.email);
+                    renderAdminPanel();
+                } else {
+                    if (user) { 
+                        console.log("Unauthorized user. Signing out.", user.email);
+                        signOut(auth); 
+                    }
+                    console.log("No authorized user. Showing login view.");
+                    renderLoginView();
                 }
-                console.log("No authorized user. Showing login view.");
-                renderLoginView();
-            }
-        });
+            });
+        }
     }
 </script>
 </body>
