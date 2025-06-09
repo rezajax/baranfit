@@ -520,46 +520,6 @@
                 scale: 2, 
                 useCORS: true, 
                 logging: false,
-                onclone: (clonedDoc) => {
-                    const style = clonedDoc.createElement('style');
-                    style.innerHTML = `
-                        #workout-plan-content {
-                            background-color: #ffffff !important;
-                            color: #000000 !important;
-                        }
-                        #workout-plan-content .card {
-                             background-color: #ffffff !important;
-                             border: 1px solid #eee !important;
-                             box-shadow: none !important;
-                        }
-                        #workout-plan-content .main-gradient-text {
-                            background: none !important;
-                            color: #000000 !important;
-                            font-weight: bold;
-                            -webkit-text-fill-color: initial !important;
-                        }
-                         #workout-plan-content .opacity-80,
-                         #workout-plan-content .opacity-70 {
-                             opacity: 1 !important;
-                         }
-                        #workout-plan-content table, 
-                        #workout-plan-content th, 
-                        #workout-plan-content td, 
-                        #workout-plan-content tr,
-                        #workout-plan-content thead,
-                        #workout-plan-content tbody {
-                            border-color: #ddd !important;
-                        }
-                         #workout-plan-content a {
-                            color: #0000ff !important;
-                            text-decoration: none;
-                         }
-                         #workout-plan-content footer {
-                             display: none;
-                         }
-                    `;
-                    clonedDoc.head.appendChild(style);
-                }
             },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
@@ -979,4 +939,4 @@
 
 </script>
 </body>
-</html>
+</ht

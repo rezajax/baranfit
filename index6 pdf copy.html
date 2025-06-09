@@ -458,7 +458,7 @@
 
             return `
                 <div id="day-view-${dayIndex}" class="day-view-content hidden space-y-4">
-                    <h4 class="text-lg font-semibold mb-2 text-center">${day.day}</h4>
+                    <h4 class="text-lg font-semibold mb-2 text-center md:hidden">${day.day}</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full text-right">
                             <thead class="border-b-2">
@@ -504,63 +504,21 @@
 
         showToast('در حال آماده‌سازی فایل PDF...');
 
-        // --- Prepare UI for capturing ---
+        // --- Prepare for PDF Generation ---
         pdfControls.classList.add('hidden');
         tabsContainer.classList.add('hidden');
         dayContentDivs.forEach(div => {
             div.classList.remove('hidden');
-            div.style.pageBreakAfter = 'always';
+            div.style.pageBreakInside = 'avoid';
+            // Also remove the mobile-only day title for PDF view
+            div.querySelector('h4')?.classList.add('hidden'); 
         });
 
         const opt = {
             margin:       [0.5, 0.5, 0.5, 0.5],
             filename:     `برنامه-تمرینی-${athleteName}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                onclone: (clonedDoc) => {
-                    const style = clonedDoc.createElement('style');
-                    style.innerHTML = `
-                        #workout-plan-content {
-                            background-color: #ffffff !important;
-                            color: #000000 !important;
-                        }
-                        #workout-plan-content .card {
-                             background-color: #ffffff !important;
-                             border: 1px solid #eee !important;
-                             box-shadow: none !important;
-                        }
-                        #workout-plan-content .main-gradient-text {
-                            background: none !important;
-                            color: #000000 !important;
-                            font-weight: bold;
-                            -webkit-text-fill-color: initial !important;
-                        }
-                         #workout-plan-content .opacity-80,
-                         #workout-plan-content .opacity-70 {
-                             opacity: 1 !important;
-                         }
-                        #workout-plan-content table, 
-                        #workout-plan-content th, 
-                        #workout-plan-content td, 
-                        #workout-plan-content tr,
-                        #workout-plan-content thead,
-                        #workout-plan-content tbody {
-                            border-color: #ddd !important;
-                        }
-                         #workout-plan-content a {
-                            color: #0000ff !important;
-                            text-decoration: none;
-                         }
-                         #workout-plan-content footer {
-                             display: none;
-                         }
-                    `;
-                    clonedDoc.head.appendChild(style);
-                }
-            },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
 
@@ -570,15 +528,15 @@
                 pdfControls.classList.remove('hidden');
                 tabsContainer.classList.remove('hidden');
                 dayContentDivs.forEach((div, index) => {
-                    div.style.pageBreakAfter = '';
                     if (index.toString() !== activeTabIndex) {
                         div.classList.add('hidden');
                     }
+                    div.querySelector('h4')?.classList.remove('hidden');
                 });
                 
                 showToast('فایل PDF با موفقیت آماده شد.');
             });
-        }, 100);
+        }, 100); // Small delay to allow DOM to update before capture
     }
     
     function renderAdminPanel() {

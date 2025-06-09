@@ -56,6 +56,11 @@
         .sidebar-open {
             transform: translateX(0) !important;
         }
+        @media print {
+            #pdf-download-btn {
+                display: none;
+            }
+        }
     </style>
     
     <!-- Dynamic Theme Styles will be injected here -->
@@ -407,7 +412,7 @@
                     <h2 class="text-2xl md:text-3xl font-bold main-gradient-text">${trainerName || 'باران حیدری'}</h2>
                 </header>
 
-                <div id="pdf-controls" class="my-6 text-center">
+                <div class="my-6 text-center">
                     <button id="pdf-download-btn" class="btn btn-primary">
                         <i class="fas fa-file-pdf mr-2"></i>
                         دریافت PDF
@@ -425,7 +430,7 @@
                 <div class="card p-6 mb-8 shadow-lg">
                     <h3 class="text-xl font-bold mb-6 text-center">برنامه تمرینی شما</h3>
                     <div id="user-tabs-container" class="flex justify-center items-center gap-2 md:gap-4 mb-6 p-2 rounded-full overflow-x-auto"></div>
-                    <div id="user-workout-days-content"></div>
+                    <div id="user-workout-table-container" class="overflow-x-auto"></div>
                 </div>
                 <div class="grid md:grid-cols-2 gap-8 mb-8">
                      <div class="card p-6 shadow-lg"><h3 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>نکات و دستور‌العمل‌ها</h3><ul class="space-y-3">${(instructions || []).map(item => `<li>${item}</li>`).join('')}</ul></div>
@@ -442,48 +447,21 @@
         `;
 
         const tabsContainer = document.getElementById('user-tabs-container');
-        const daysContentContainer = document.getElementById('user-workout-days-content');
+        const tableContainer = document.getElementById('user-workout-table-container');
 
         tabsContainer.innerHTML = (workoutDays || []).map((day, index) => `<button data-index="${index}" class="day-tab flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full transition-all">${day.day}</button>`).join('');
         
-        daysContentContainer.innerHTML = (workoutDays || []).map((day, dayIndex) => {
-            const exercisesHtml = (day.exercises || []).map((ex, i) => `
-                <tr class="border-b">
-                    <td class="p-3 text-center font-semibold">${i + 1}</td>
-                    <td class="p-3 font-medium">${ex.name}</td>
-                    <td class="p-3 text-center">${ex.sets}</td>
-                    <td class="p-3">${ex.desc}</td>
-                </tr>
-            `).join('');
-
-            return `
-                <div id="day-view-${dayIndex}" class="day-view-content hidden space-y-4">
-                    <h4 class="text-lg font-semibold mb-2 text-center">${day.day}</h4>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right">
-                            <thead class="border-b-2">
-                                <tr>
-                                    <th class="p-3 text-center">#</th>
-                                    <th class="p-3">حرکت</th>
-                                    <th class="p-3 text-center">ست</th>
-                                    <th class="p-3">توضیحات</th>
-                                </tr>
-                            </thead>
-                            <tbody>${exercisesHtml}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        const renderTable = (dayIndex) => {
+            const day = (workoutDays || [])[dayIndex];
+            if (!day) return;
+            tableContainer.innerHTML = `<table class="w-full text-right"><thead class="border-b-2"><tr><th class="p-3 text-center">#</th><th class="p-3">حرکت</th><th class="p-3 text-center">ست</th><th class="p-3">توضیحات</th></tr></thead><tbody>${(day.exercises || []).map((ex, i) => `<tr class="border-b"><td class="p-3 text-center font-semibold">${i + 1}</td><td class="p-3 font-medium">${ex.name}</td><td class="p-3 text-center">${ex.sets}</td><td class="p-3">${ex.desc}</td></tr>`).join('')}</tbody></table>`;
+        };
         
         document.querySelectorAll('.day-tab').forEach(btn => {
             btn.addEventListener('click', () => {
-                const dayIndex = btn.dataset.index;
                 document.querySelectorAll('.day-tab').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.day-view-content').forEach(c => c.classList.add('hidden'));
-                
                 btn.classList.add('active');
-                document.getElementById(`day-view-${dayIndex}`)?.classList.remove('hidden');
+                renderTable(btn.dataset.index);
             });
         });
 
@@ -495,90 +473,30 @@
     }
 
     function generatePdf(athleteName = 'ورزشکار') {
-        const pdfControls = document.getElementById('pdf-controls');
-        const tabsContainer = document.getElementById('user-tabs-container');
-        const dayContentDivs = document.querySelectorAll('.day-view-content');
-        const elementToPrint = document.getElementById('workout-plan-content');
-        
-        const activeTabIndex = document.querySelector('.day-tab.active')?.dataset.index || '0';
+        const downloadBtn = document.getElementById('pdf-download-btn');
+        const originalBtnText = downloadBtn.innerHTML;
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>در حال ساخت...';
 
-        showToast('در حال آماده‌سازی فایل PDF...');
-
-        // --- Prepare UI for capturing ---
-        pdfControls.classList.add('hidden');
-        tabsContainer.classList.add('hidden');
-        dayContentDivs.forEach(div => {
-            div.classList.remove('hidden');
-            div.style.pageBreakAfter = 'always';
-        });
-
+        const element = document.getElementById('workout-plan-content');
         const opt = {
-            margin:       [0.5, 0.5, 0.5, 0.5],
+            margin:       0.5,
             filename:     `برنامه-تمرینی-${athleteName}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                onclone: (clonedDoc) => {
-                    const style = clonedDoc.createElement('style');
-                    style.innerHTML = `
-                        #workout-plan-content {
-                            background-color: #ffffff !important;
-                            color: #000000 !important;
-                        }
-                        #workout-plan-content .card {
-                             background-color: #ffffff !important;
-                             border: 1px solid #eee !important;
-                             box-shadow: none !important;
-                        }
-                        #workout-plan-content .main-gradient-text {
-                            background: none !important;
-                            color: #000000 !important;
-                            font-weight: bold;
-                            -webkit-text-fill-color: initial !important;
-                        }
-                         #workout-plan-content .opacity-80,
-                         #workout-plan-content .opacity-70 {
-                             opacity: 1 !important;
-                         }
-                        #workout-plan-content table, 
-                        #workout-plan-content th, 
-                        #workout-plan-content td, 
-                        #workout-plan-content tr,
-                        #workout-plan-content thead,
-                        #workout-plan-content tbody {
-                            border-color: #ddd !important;
-                        }
-                         #workout-plan-content a {
-                            color: #0000ff !important;
-                            text-decoration: none;
-                         }
-                         #workout-plan-content footer {
-                             display: none;
-                         }
-                    `;
-                    clonedDoc.head.appendChild(style);
-                }
-            },
+            html2canvas:  { scale: 2, useCORS: true },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
 
-        setTimeout(() => {
-            html2pdf().set(opt).from(elementToPrint).save().finally(() => {
-                // --- Restore UI After PDF Generation ---
-                pdfControls.classList.remove('hidden');
-                tabsContainer.classList.remove('hidden');
-                dayContentDivs.forEach((div, index) => {
-                    div.style.pageBreakAfter = '';
-                    if (index.toString() !== activeTabIndex) {
-                        div.classList.add('hidden');
-                    }
-                });
-                
-                showToast('فایل PDF با موفقیت آماده شد.');
-            });
-        }, 100);
+        html2pdf().set(opt).from(element).save().then(() => {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalBtnText;
+            showToast('فایل PDF با موفقیت آماده شد.');
+        }).catch(err => {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalBtnText;
+            showToast('خطا در ساخت فایل PDF.');
+            console.error(err);
+        });
     }
     
     function renderAdminPanel() {
