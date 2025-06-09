@@ -104,6 +104,10 @@
             width: 100%;
             color: #e5e7eb;
         }
+        /* ADDED: For password toggle icon */
+        .input-field-icon {
+            padding-left: 2.5rem; /* Make space for icon */
+        }
         
         /* Responsive & Sidebar Styles */
         .sidebar {
@@ -123,7 +127,7 @@
 
     <!-- Login View -->
     <div id="login-view" class="hidden">
-        <div class="min-h-screen flex items-center justify-center">
+        <div class="min-h-screen flex items-center justify-center p-4">
             <div class="card p-8 w-full max-w-sm">
                 <h2 class="text-2xl font-bold text-center mb-6 main-gradient-text">ورود به پنل مدیریت</h2>
                 <form id="login-form">
@@ -131,9 +135,13 @@
                         <label for="email" class="block mb-2 text-sm font-medium text-gray-400">ایمیل</label>
                         <input type="email" id="login-email" class="input-field" required>
                     </div>
-                    <div class="mb-6">
+                    <div class="mb-6 relative">
                         <label for="password" class="block mb-2 text-sm font-medium text-gray-400">رمز عبور</label>
-                        <input type="password" id="login-password" class="input-field" required>
+                        <!-- UPDATED: Added a wrapper div and an icon -->
+                        <input type="password" id="login-password" class="input-field input-field-icon" required>
+                        <span id="toggle-password" class="absolute left-3 top-10 cursor-pointer text-gray-400">
+                            <i class="fas fa-eye"></i>
+                        </span>
                     </div>
                     <button type="submit" id="login-btn" class="btn btn-primary w-full">ورود</button>
                 </form>
@@ -185,7 +193,6 @@
     };
     
     // --- ADMIN CONFIGURATION ---
-    // IMPORTANT: Change this email to the admin's email you created in Firebase Authentication.
     const ADMIN_EMAIL = "mail@baranfit.ir";
 
     // --- INITIALIZE FIREBASE & FIRESTORE ---
@@ -240,20 +247,34 @@
         loginView.classList.remove('hidden');
         
         const loginForm = document.getElementById('login-form');
+        const passwordInput = document.getElementById('login-password');
+        const togglePassword = document.getElementById('toggle-password');
+
+        // NEW: Event listener for the password toggle icon
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            // Change the icon
+            togglePassword.querySelector('i').classList.toggle('fa-eye');
+            togglePassword.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+        
         loginForm.onsubmit = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+            // NEW: Added .trim() to remove whitespace from email and password
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
             const loginBtn = document.getElementById('login-btn');
+            
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged will handle the rest
+                // onAuthStateChanged will handle successful login
             } catch (error) {
                 showToast("ایمیل یا رمز عبور اشتباه است.");
-                console.error("Login failed:", error);
+                console.error("Login failed:", error.code);
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = 'ورود';
             }
