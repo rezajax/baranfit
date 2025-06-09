@@ -262,6 +262,10 @@
         const { trainerName, athleteName, startDate, endDate, trainerPhone, instructions, workoutDays, importantNotes } = data;
         
         loginView.classList.add('hidden');
+        // FIXED: Added user-specific styles back
+        const userStyles = `<style> .tab-active-user { background-color: #4f46e5 !important; color: #ffffff !important; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.5); } details > summary { list-style: none; } details > summary::-webkit-details-marker { display: none; } .table-responsive { display: block; width: 100%; overflow-x: auto; } </style>`;
+        document.head.insertAdjacentHTML('beforeend', userStyles);
+
         appContainer.innerHTML = `
             <div class="container mx-auto p-4 md:p-8 max-w-4xl">
                 <header class="text-center mb-8">
@@ -322,6 +326,9 @@
 
     function renderAdminPanel() {
         loginView.classList.add('hidden');
+        const adminStyles = `<style> .tab-active-admin { background-color: #4f46e5 !important; color: #ffffff !important; } .sidebar-scroll::-webkit-scrollbar { display: none; } .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; } </style>`;
+        document.head.insertAdjacentHTML('beforeend', adminStyles);
+
         appContainer.innerHTML = `
             <div class="relative min-h-screen md:flex">
                 <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-20 md:hidden hidden"></div>
@@ -369,7 +376,8 @@
         });
     }
 
-    async function renderEditor(athlete) {
+    // FIXED: Added activeDayIndex parameter
+    async function renderEditor(athlete, activeDayIndex = 0) {
         document.getElementById('welcome-screen').classList.add('hidden');
         const editorScreen = document.getElementById('editor-screen');
         editorScreen.classList.remove('hidden');
@@ -377,12 +385,15 @@
         const plan = athlete.plan || {};
         const workoutDays = plan.workoutDays || [];
         
+        // FIXED: Use activeDayIndex to set the active tab
+        let tabsHtml = workoutDays.map((day, index) => `<button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === activeDayIndex ? 'tab-active-admin' : ''}" data-day="${index}">${day.day}</button>`).join('');
+
+        // FIXED: Use activeDayIndex to show the correct content
         let daysHtml = workoutDays.map((day, dayIndex) => {
             let exercises = day.exercises || [];
             let exercisesHtml = exercises.map((ex, exIndex) => `<tr class="exercise-row"><td class="p-2"><input type="text" class="input-field" value="${ex.name || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="name"></td><td class="p-2"><input type="text" class="input-field" value="${ex.sets || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="sets"></td><td class="p-2"><input type="text" class="input-field" value="${ex.desc || ''}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="desc"></td><td class="p-2 text-center"><button class="btn btn-danger btn-sm px-3 py-1 remove-exercise-btn" data-day="${dayIndex}" data-ex="${exIndex}"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-            return `<div id="day-content-${dayIndex}" class="day-content ${dayIndex === 0 ? '' : 'hidden'}"><div class="overflow-x-auto"><table class="w-full text-right"><thead><tr><th class="p-2 w-2/5">حرکت</th><th class="p-2 w-1/5">ست</th><th class="p-2 w-2/5">توضیحات</th><th class="p-2">حذف</th></tr></thead><tbody>${exercisesHtml}</tbody></table></div><button class="btn btn-secondary mt-4 add-exercise-btn" data-day="${dayIndex}"><i class="fas fa-plus ml-2"></i>افزودن حرکت</button></div>`;
+            return `<div id="day-content-${dayIndex}" class="day-content ${dayIndex === activeDayIndex ? '' : 'hidden'}"><div class="overflow-x-auto"><table class="w-full text-right"><thead><tr><th class="p-2 w-2/5">حرکت</th><th class="p-2 w-1/5">ست</th><th class="p-2 w-2/5">توضیحات</th><th class="p-2">حذف</th></tr></thead><tbody>${exercisesHtml}</tbody></table></div><button class="btn btn-secondary mt-4 add-exercise-btn" data-day="${dayIndex}"><i class="fas fa-plus ml-2"></i>افزودن حرکت</button></div>`;
         }).join('');
-        let tabsHtml = workoutDays.map((day, index) => `<button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === 0 ? 'tab-active-admin' : ''}" data-day="${index}">${day.day}</button>`).join('');
 
         editorScreen.innerHTML = `
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -400,6 +411,15 @@
     function loadAthleteEditor(id) {
         const athlete = athletes.find(a => a.id === id);
         if (athlete) { currentAthleteId = id; renderAthleteList(); renderEditor(athlete); }
+    }
+
+    // FIXED: Added helper for ordinal numbers
+    function numberToPersianOrdinal(n) {
+        const ordinals = ["اول", "دوم", "سوم", "چهارم", "پنجم", "ششم", "هفتم", "هشتم", "نهم", "دهم"];
+        if (n > 0 && n <= ordinals.length) {
+            return ordinals[n - 1];
+        }
+        return n; // Fallback to the number itself e.g., روز 11
     }
 
     function setupAdminEventListeners() {
@@ -422,11 +442,14 @@
                 if (e.target.closest('#delete-athlete-btn')) { deleteCurrentAthlete(); return; }
                 if (e.target.closest('#share-btn')) { shareCurrentAthlete(); return; }
                 
-                // --- FIXED: Correct state management for dynamic buttons ---
                 const athleteIndex = athletes.findIndex(a => a.id === currentAthleteId);
-                if (athleteIndex === -1) return; // No athlete selected, do nothing
-                const athlete = athletes[athleteIndex];
-
+                if (athleteIndex === -1) return;
+                
+                const currentDOMState = getEditorData();
+                if (!currentDOMState) return; 
+                
+                let athlete = currentDOMState;
+                
                 const dayTab = e.target.closest('.day-tab');
                 const addExerciseBtn = e.target.closest('.add-exercise-btn');
                 const removeExerciseBtn = e.target.closest('.remove-exercise-btn');
@@ -434,13 +457,15 @@
                 const removeDayBtn = e.target.closest('#remove-day-btn');
 
                 if (dayTab) {
-                    const dayIndex = dayTab.dataset.day;
-                    document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('tab-active-admin'));
-                    dayTab.classList.add('tab-active-admin');
-                    document.querySelectorAll('.day-content').forEach(c => c.classList.add('hidden'));
-                    document.getElementById(`day-content-${dayIndex}`)?.classList.remove('hidden');
+                    const dayIndex = parseInt(dayTab.dataset.day, 10);
+                    renderEditor(athlete, dayIndex); // Re-render with the correct active tab
+                    return;
                 }
                 
+                let modified = false;
+                let newActiveIndex = document.querySelector('.day-tab.tab-active-admin')?.dataset.day || 0;
+                newActiveIndex = parseInt(newActiveIndex, 10);
+
                 if (addExerciseBtn) {
                     const dayIndex = parseInt(addExerciseBtn.dataset.day, 10);
                     if (athlete.plan.workoutDays?.[dayIndex]) {
@@ -448,7 +473,7 @@
                             athlete.plan.workoutDays[dayIndex].exercises = [];
                         }
                         athlete.plan.workoutDays[dayIndex].exercises.push({ name: '', sets: '', desc: '' });
-                        renderEditor(athlete);
+                        modified = true;
                     }
                 }
 
@@ -457,14 +482,17 @@
                     const exIndex = parseInt(removeExerciseBtn.dataset.ex, 10);
                      if (athlete.plan.workoutDays?.[dayIndex]?.exercises) {
                         athlete.plan.workoutDays[dayIndex].exercises.splice(exIndex, 1);
-                        renderEditor(athlete);
+                        modified = true;
                     }
                 }
 
                 if (addDayBtn) {
                     if (!athlete.plan.workoutDays) athlete.plan.workoutDays = [];
-                    athlete.plan.workoutDays.push({ day: `روز ${athlete.plan.workoutDays.length + 1}`, exercises: [] });
-                    renderEditor(athlete);
+                    const newDayIndex = athlete.plan.workoutDays.length;
+                    const newDayName = `روز ${numberToPersianOrdinal(newDayIndex + 1)}`;
+                    athlete.plan.workoutDays.push({ day: newDayName, exercises: [] });
+                    newActiveIndex = newDayIndex; // Set the new day as active
+                    modified = true;
                 }
                 
                 if (removeDayBtn) {
@@ -472,11 +500,24 @@
                     if (!activeTab) return;
                     showConfirm("آیا از حذف این روز تمرینی مطمئن هستید؟", () => {
                         const dayIndex = parseInt(activeTab.dataset.day, 10);
-                        if (athlete.plan.workoutDays) {
-                            athlete.plan.workoutDays.splice(dayIndex, 1);
-                            renderEditor(athlete);
+                        const athleteStateAfterConfirm = getEditorData();
+                        if (athleteStateAfterConfirm.plan.workoutDays) {
+                            athleteStateAfterConfirm.plan.workoutDays.splice(dayIndex, 1);
+                            // Update day names to be sequential again
+                            athleteStateAfterConfirm.plan.workoutDays.forEach((day, index) => {
+                                day.day = `روز ${numberToPersianOrdinal(index + 1)}`;
+                            });
+                            athletes[athleteIndex] = athleteStateAfterConfirm;
+                            const newActiveIndexAfterDelete = Math.max(0, dayIndex - 1);
+                            renderEditor(athleteStateAfterConfirm, newActiveIndexAfterDelete);
                         }
                     });
+                    return;
+                }
+                
+                if (modified) {
+                    athletes[athleteIndex] = athlete;
+                    renderEditor(athlete, newActiveIndex);
                 }
             });
         }
@@ -507,18 +548,19 @@
     }
     
     function getEditorData() {
-        // Now directly gets data from the DOM, no need for local copy
         if (!currentAthleteId) return null;
+        
+        const editorScreen = document.getElementById('editor-screen');
+        if (!editorScreen || editorScreen.classList.contains('hidden')) return null;
 
         const originalAthlete = athletes.find(a => a.id === currentAthleteId);
         if (!originalAthlete) return null;
 
-        // Create a new object to avoid unintended mutations, but populate it with live form data
         const updatedAthleteData = {
-            ...originalAthlete, // carry over ID and other non-form properties
+            id: currentAthleteId,
             name: document.getElementById('athlete-name-input').value,
             plan: {
-                ...originalAthlete.plan, // carry over trainerName etc.
+                ...originalAthlete.plan,
                 startDate: document.getElementById('start-date').value,
                 endDate: document.getElementById('end-date').value,
                 instructions: document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== ''),
@@ -538,14 +580,13 @@
                 });
             });
             updatedAthleteData.plan.workoutDays.push({
-                day: dayTab ? dayTab.textContent : `روز ${dayIndex + 1}`, 
+                day: dayTab ? dayTab.textContent : `روز ${numberToPersianOrdinal(dayIndex + 1)}`, 
                 exercises: exercises 
             });
         });
 
         return updatedAthleteData;
     }
-
 
     async function saveCurrentAthlete(showSuccessToast = false) {
         if (!currentAthleteId) return null;
@@ -560,8 +601,14 @@
             saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره'; 
             return; 
         }
+        
+        // Ensure day names are sequential before saving
+        if (updatedData.plan.workoutDays) {
+            updatedData.plan.workoutDays.forEach((day, index) => {
+                day.day = `روز ${numberToPersianOrdinal(index + 1)}`;
+            });
+        }
 
-        // Remove the id from the data object before saving to Firestore
         const { id, ...dataToSave } = updatedData;
 
         try {
@@ -626,7 +673,6 @@
                 renderLoginView(); 
             }
         } else {
-            // This is an admin trying to access the panel
             if (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) {
                 renderAdminPanel();
             } else {
@@ -639,7 +685,6 @@
         onAuthStateChanged(auth, (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('plan')) {
-                // If a plan link is accessed, show it regardless of auth state
                 startApp();
                 return;
             }
