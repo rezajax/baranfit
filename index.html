@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پنل مدیریت مربی - باران حیدری</title>
+    <title>اپلیکیشن مدیریت برنامه تمرینی</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,10 +17,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
+        /* General Styles */
         body {
             font-family: 'Vazirmatn', sans-serif;
             background-color: #111827;
             color: #e5e7eb;
+            overscroll-behavior: none;
         }
         .main-gradient-text {
             background: linear-gradient(to right, #a855f7, #6366f1);
@@ -32,19 +34,6 @@
             border: 1px solid #374151;
             border-radius: 1rem;
         }
-        .input-field {
-            background-color: #374151;
-            border: 1px solid #4b5563;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            width: 100%;
-            color: #e5e7eb;
-            transition: border-color 0.2s;
-        }
-        .input-field:focus {
-            outline: none;
-            border-color: #6366f1;
-        }
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
@@ -52,375 +41,494 @@
             transition: all 0.2s;
             cursor: pointer;
             text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
-        .btn-primary {
-            background-color: #4f46e5;
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+        .btn-secondary { background-color: #374151; color: #e5e7eb; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover:not(:disabled) { background-color: #b91c1c; }
+        .btn-success { background-color: #16a34a; color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+
+        /* Modal & Toast Styles */
+        .modal-overlay, .toast-container {
+            position: fixed;
+            z-index: 50;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay {
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 500px;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        .modal-overlay:not(.hidden) .modal-content {
+            transform: scale(1);
+        }
+        .toast-container {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1f2937;
             color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .btn-primary:hover {
-            background-color: #4338ca;
-        }
-        .btn-secondary {
+        .hidden { display: none; }
+
+        .input-field {
             background-color: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            width: 100%;
             color: #e5e7eb;
         }
-        .btn-secondary:hover {
-            background-color: #4b5563;
+        
+        /* Responsive & Sidebar Styles */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
         }
-        .btn-danger {
-            background-color: #dc2626;
-            color: white;
-        }
-        .btn-danger:hover {
-             background-color: #b91c1c;
-        }
-        .tab-active {
-            background-color: #4f46e5 !important;
-            color: #ffffff !important;
-        }
-        /* Hide scrollbar for sidebar */
-        .sidebar-scroll::-webkit-scrollbar {
-            display: none;
-        }
-        .sidebar-scroll {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .sidebar-open {
+            transform: translateX(0) !important;
         }
     </style>
 </head>
 <body class="antialiased">
 
-    <div class="flex h-screen bg-gray-900">
-        <!-- Sidebar -->
-        <aside class="w-64 flex-shrink-0 bg-gray-800 p-4 flex flex-col">
-            <div class="text-center mb-8">
-                <h1 class="text-xl font-bold main-gradient-text">پنل مدیریت باران</h1>
+    <!-- Main application container -->
+    <div id="app-container">
+        <!-- App content will be rendered here -->
+    </div>
+    
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">اشتراک گذاری برنامه</h3>
+            <p class="text-gray-400 mb-4">این لینک را کپی کرده و برای شاگرد خود ارسال کنید.</p>
+            <div class="flex items-center gap-2">
+                <input type="text" id="share-link-input" readonly class="input-field text-left" dir="ltr">
+                <button id="copy-link-btn" class="btn btn-primary px-4"><i class="fas fa-copy"></i></button>
             </div>
-            <h2 class="text-sm font-semibold text-gray-400 mb-2 uppercase">لیست شاگردان</h2>
-            <div id="athlete-list" class="flex-grow overflow-y-auto sidebar-scroll space-y-2">
-                <!-- Athlete list will be populated here -->
-            </div>
-            <button id="add-athlete-btn" class="btn btn-primary w-full mt-4"><i class="fas fa-plus ml-2"></i>افزودن شاگرد</button>
-        </aside>
-
-        <!-- Main Content -->
-        <main id="main-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
-            <div id="welcome-screen" class="flex items-center justify-center h-full">
-                <div class="text-center">
-                    <i class="fas fa-users text-6xl text-gray-600 mb-4"></i>
-                    <h2 class="text-2xl font-bold text-gray-400">یک شاگرد را انتخاب کنید</h2>
-                    <p class="text-gray-500">برای مشاهده یا ویرایش برنامه، یک شاگرد را از لیست انتخاب کنید یا یک شاگرد جدید اضافه کنید.</p>
-                </div>
-            </div>
-
-            <div id="editor-screen" class="hidden">
-                 <!-- Main Editor content will be injected here -->
-            </div>
-        </main>
+            <button id="close-modal-btn" class="btn btn-secondary w-full mt-6">بستن</button>
+        </div>
     </div>
 
-<script>
-// --- DATABASE SIMULATION ---
-// In a real app, this would be a database like Firebase.
-let db = {
-    athletes: [
-        {
-            id: 1,
-            name: "سپیده",
-            plan: {
-                startDate: "1403/10/04",
-                endDate: "1403/11/04",
-                instructions: [
-                    "گرم کردن در ابتدای تمرین: ۴ دقیقه گرم کردن عمومی بدن و ۳ دقیقه اجرای حرکات با وزنه بسیار سبک روی عضلاتی که قصد تمرین دادنشان را دارید.",
-                    "استراحت بین ست ها: 60 ثانیه",
-                    "استراحت بین حرکات: 90 ثانیه",
-                ],
-                workoutDays: [
-                    { day: "روز اول", exercises: [{ name: "جلو ران", sets: "2x12-2x10", desc: "N/A" }, { name: "جلو ران بارفیکس", sets: "3x15", desc: "N/A" }] },
-                    { day: "روز دوم", exercises: [{ name: "زیر بغل", sets: "3x15", desc: "N/A" }, { name: "شنا دیواری + قایقی", sets: "4x15/12", desc: "N/A" }] }
-                ],
-                importantNotes: [
-                    "با توجه به تعداد حرکات و ست‌ها، تمرین بدنسازی شما نهایتا باید ۷۰ دقیقه طول بکشد.",
-                    "در هر هفته تلاش کنید کمی سنگین‌تر وزنه بزنید."
-                ]
-            }
-        },
-        {
-            id: 2,
-            name: "مریم",
-            plan: {
-                startDate: "1403/11/01",
-                endDate: "1403/12/01",
-                instructions: ["گرم کردن 10 دقیقه"],
-                workoutDays: [
-                    { day: "روز A", exercises: [{ name: "اسکات", sets: "5x5", desc: "" }] }
-                ],
-                importantNotes: ["آب کافی بنوشید."]
-            }
-        }
-    ],
-    nextId: 3,
-};
-
-// --- DOM Elements ---
-const athleteListContainer = document.getElementById('athlete-list');
-const mainContent = document.getElementById('main-content');
-const welcomeScreen = document.getElementById('welcome-screen');
-const editorScreen = document.getElementById('editor-screen');
-const addAthleteBtn = document.getElementById('add-athlete-btn');
-
-let currentAthleteId = null;
-
-// --- RENDER FUNCTIONS ---
-
-function renderAthleteList() {
-    athleteListContainer.innerHTML = db.athletes.map(athlete => `
-        <div data-id="${athlete.id}" class="athlete-item flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-700 ${athlete.id === currentAthleteId ? 'bg-indigo-600 text-white' : ''}">
-            <span class="font-semibold">${athlete.name}</span>
-            <i class="fas fa-chevron-left text-xs"></i>
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <p id="confirm-modal-text" class="text-lg mb-6"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-modal-yes" class="btn btn-danger">بله، حذف کن</button>
+                <button id="confirm-modal-no" class="btn btn-secondary">انصراف</button>
+            </div>
         </div>
-    `).join('');
+    </div>
 
-    // Add event listeners to each item
-    document.querySelectorAll('.athlete-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const id = parseInt(item.dataset.id);
-            loadAthleteEditor(id);
-        });
-    });
-}
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-container hidden"></div>
 
-function renderEditor(athlete) {
-    welcomeScreen.classList.add('hidden');
-    editorScreen.classList.remove('hidden');
+<script type="module">
+    // --- FIREBASE IMPORTS ---
+    // These lines import the necessary functions from the Firebase SDK.
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const plan = athlete.plan;
+    // --- FIREBASE CONFIGURATION ---
+    // This configuration object connects your app to your Firebase project.
+    const firebaseConfig = {
+      apiKey: "AIzaSyDPGEJ55EGhwlrKm6uTsajsY-tBenX2byg",
+      authDomain: "sample-firebase-ai-app-6cfd7.firebaseapp.com",
+      projectId: "sample-firebase-ai-app-6cfd7",
+      storageBucket: "sample-firebase-ai-app-6cfd7.firebasestorage.app",
+      messagingSenderId: "610685018583",
+      appId: "1:610685018583:web:25b863bc65dd0e9ba56b92"
+    };
 
-    // Generate HTML for workout day tabs and tables
-    let daysHtml = plan.workoutDays.map((day, dayIndex) => {
-        let exercisesHtml = day.exercises.map((ex, exIndex) => `
-            <tr class="exercise-row">
-                <td class="p-2"><input type="text" class="input-field" value="${ex.name}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="name"></td>
-                <td class="p-2"><input type="text" class="input-field" value="${ex.sets}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="sets"></td>
-                <td class="p-2"><input type="text" class="input-field" value="${ex.desc}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="desc"></td>
-                <td class="p-2 text-center">
-                    <button class="btn btn-danger btn-sm px-3 py-1 remove-exercise-btn" data-day="${dayIndex}" data-ex="${exIndex}"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-
-        return `
-            <div id="day-content-${dayIndex}" class="day-content ${dayIndex === 0 ? '' : 'hidden'}">
-                <div class="table-responsive">
-                    <table class="w-full text-right">
-                        <thead>
-                           <tr>
-                                <th class="p-2 w-2/5">حرکت تمرینی</th>
-                                <th class="p-2 w-1/5">تعداد ست</th>
-                                <th class="p-2 w-2/5">توضیحات</th>
-                                <th class="p-2">حذف</th>
-                            </tr>
-                        </thead>
-                        <tbody>${exercisesHtml}</tbody>
-                    </table>
+    // --- INITIALIZE FIREBASE & FIRESTORE ---
+    let db, auth;
+    try {
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        console.log("Firebase initialized successfully.");
+    } catch (e) {
+        console.error("Error initializing Firebase. Please check your firebaseConfig.", e);
+        // Display a user-friendly error on the page
+        document.getElementById('app-container').innerHTML = `
+            <div class="h-screen flex items-center justify-center text-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-red-500 mb-4">خطا در اتصال به پایگاه داده</h1>
+                    <p class="text-gray-400">لطفاً تنظیمات Firebase خود را در کد بررسی کنید.</p>
                 </div>
-                <button class="btn btn-secondary mt-4 add-exercise-btn" data-day="${dayIndex}"><i class="fas fa-plus ml-2"></i>افزودن حرکت</button>
             </div>
         `;
-    }).join('');
+    }
 
-    let tabsHtml = plan.workoutDays.map((day, index) => `
-        <button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === 0 ? 'tab-active' : ''}" data-day="${index}">${day.day}</button>
-    `).join('');
+    // --- GLOBAL STATE & DOM Elements ---
+    const appContainer = document.getElementById('app-container');
+    let athletes = []; // Local cache of athletes
+    let currentAthleteId = null;
+    let authReady = false;
 
-    // Main editor structure
-    editorScreen.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-             <h2 class="text-2xl font-bold">برنامه شاگرد: <input type="text" id="athlete-name-input" class="bg-transparent border-b-2 border-gray-600 focus:border-indigo-500 outline-none" value="${athlete.name}"></h2>
-             <div>
-                <button id="save-all-btn" class="btn btn-primary"><i class="fas fa-save ml-2"></i>ذخیره کل تغییرات</button>
-                <button id="delete-athlete-btn" class="btn btn-danger mr-2"><i class="fas fa-user-times ml-2"></i>حذف شاگرد</button>
-             </div>
-        </div>
+    // =================================================================================
+    // --- UTILITY FUNCTIONS (Toast & Confirm) ---
+    // =================================================================================
+    
+    function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, duration);
+    }
 
-        <!-- General Info -->
-        <div class="card p-6 mb-6">
-            <div class="grid md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-400">تاریخ شروع</label>
-                    <input type="text" id="start-date" class="input-field" value="${plan.startDate}">
-                </div>
-                 <div>
-                    <label class="block mb-2 font-semibold text-gray-400">تاریخ پایان</label>
-                    <input type="text" id="end-date" class="input-field" value="${plan.endDate}">
-                </div>
-            </div>
-        </div>
+    function showConfirm(text, onConfirm) {
+        const modal = document.getElementById('confirm-modal');
+        document.getElementById('confirm-modal-text').textContent = text;
+        modal.classList.remove('hidden');
+
+        const yesBtn = document.getElementById('confirm-modal-yes');
+        const noBtn = document.getElementById('confirm-modal-no');
+
+        const cleanup = () => {
+            modal.classList.add('hidden');
+            // Clone and replace to remove old event listeners
+            yesBtn.replaceWith(yesBtn.cloneNode(true));
+            noBtn.replaceWith(noBtn.cloneNode(true));
+        };
+
+        document.getElementById('confirm-modal-yes').addEventListener('click', () => {
+            onConfirm();
+            cleanup();
+        });
+
+        document.getElementById('confirm-modal-no').addEventListener('click', cleanup);
+    }
+
+    // =================================================================================
+    // --- USER VIEW LOGIC ---
+    // =================================================================================
+    function renderUserView(data) {
+        const { trainerName, athleteName, startDate, endDate, trainerPhone, instructions, workoutDays, importantNotes } = data;
         
-        <!-- Workout Days -->
-        <div class="card p-6 mb-6">
-            <div class="flex items-center gap-2 mb-4 border-b border-gray-700 pb-4 overflow-x-auto">
-                <div id="tabs-container" class="flex items-center gap-2">
-                    ${tabsHtml}
+        const userStyles = `<style> .tab-active-user { background-color: #4f46e5 !important; color: #ffffff !important; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.5); } details > summary { list-style: none; } details > summary::-webkit-details-marker { display: none; } .table-responsive { display: block; width: 100%; overflow-x: auto; } </style>`;
+        document.head.insertAdjacentHTML('beforeend', userStyles);
+
+        appContainer.innerHTML = `
+            <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+                <header class="text-center mb-8">
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">برنامه تمرینی اختصاصی</h1>
+                    <h2 class="text-2xl md:text-3xl font-bold main-gradient-text">${trainerName}</h2>
+                </header>
+                <div class="card p-6 mb-8 text-center shadow-lg">
+                    <h3 class="text-xl font-bold mb-4">ورزشکار: <span class="main-gradient-text">${athleteName}</span></h3>
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8 text-gray-300">
+                        <div class="flex items-center gap-2"><i class="fas fa-play-circle text-green-400"></i><span>تاریخ شروع: ${startDate}</span></div>
+                        <div class="flex items-center gap-2"><i class="fas fa-stop-circle text-red-400"></i><span>تاریخ پایان: ${endDate}</span></div>
+                        <div class="flex items-center gap-2"><i class="fas fa-phone-alt text-indigo-400"></i><span>شماره مربی: ${trainerPhone}</span></div>
+                    </div>
                 </div>
-                <button id="add-day-btn" class="btn btn-secondary flex-shrink-0 px-3 py-2 ml-auto"><i class="fas fa-plus"></i></button>
-                 <button id="remove-day-btn" class="btn btn-danger flex-shrink-0 px-3 py-2"><i class="fas fa-trash"></i></button>
+                <div class="card p-6 mb-8 shadow-lg">
+                    <h3 class="text-xl font-bold mb-6 text-center text-indigo-400">برنامه تمرینی شما</h3>
+                    <div id="user-tabs-container" class="flex justify-center items-center gap-2 md:gap-4 mb-6 bg-gray-800 p-2 rounded-full overflow-x-auto"></div>
+                    <div id="user-workout-table-container" class="table-responsive"></div>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div class="card p-6 shadow-lg">
+                        <details open>
+                            <summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-purple-400"><i class="fas fa-clipboard-list ml-2"></i>نکات و دستور‌العمل‌ها</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary>
+                            <ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-purple-400">${instructions.map(item => `<li>${item}</li>`).join('')}</ul>
+                        </details>
+                    </div>
+                    <div class="card p-6 shadow-lg">
+                        <details open>
+                            <summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-amber-400"><i class="fas fa-exclamation-triangle ml-2"></i>نکات مهم</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary>
+                            <ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-amber-400">${importantNotes.map(item => `<li>${item}</li>`).join('')}</ul>
+                        </details>
+                    </div>
+                </div>
+                <footer class="text-center mt-12 text-gray-400">
+                    <p>باران رو میتونی این جا دنبال کنی <span class="text-lg">🥺❤️</span></p>
+                    <a href="#" class="text-indigo-400 hover:text-indigo-300 text-2xl mt-2 inline-block"><i class="fab fa-instagram"></i></a>
+                </footer>
             </div>
-            <div id="days-content-container">
-                ${daysHtml}
-            </div>
-        </div>
+        `;
 
-        <!-- Notes -->
-        <div class="grid md:grid-cols-2 gap-6">
-             <div class="card p-6">
-                <label class="block mb-2 font-bold text-purple-400">نکات و دستور‌العمل‌ها</label>
-                <textarea id="instructions-area" class="input-field" rows="5">${plan.instructions.join('\n')}</textarea>
-            </div>
-             <div class="card p-6">
-                <label class="block mb-2 font-bold text-amber-400">نکات مهم</label>
-                <textarea id="important-notes-area" class="input-field" rows="5">${plan.importantNotes.join('\n')}</textarea>
-            </div>
-        </div>
-    `;
-    addEditorEventListeners();
-}
+        const tabsContainer = document.getElementById('user-tabs-container');
+        const tableContainer = document.getElementById('user-workout-table-container');
 
-// --- LOGIC & EVENT LISTENERS ---
+        tabsContainer.innerHTML = workoutDays.map((day, index) =>
+            `<button data-index="${index}" class="user-tab-btn flex-shrink-0 px-4 py-2 text-sm font-semibold text-gray-300 rounded-full transition-all duration-300 ease-in-out hover:bg-gray-700">${day.day}</button>`
+        ).join('');
 
-function loadAthleteEditor(id) {
-    const athlete = db.athletes.find(a => a.id === id);
-    if (athlete) {
-        currentAthleteId = id;
-        renderAthleteList(); // Re-render to highlight selection
-        renderEditor(athlete);
-    }
-}
+        const renderTable = (dayIndex) => {
+            const day = workoutDays[dayIndex];
+            tableContainer.innerHTML = `
+                <table class="w-full text-right">
+                    <thead class="border-b-2 border-gray-600"><tr><th class="p-3 text-center">#</th><th class="p-3">حرکت</th><th class="p-3 text-center">ست</th><th class="p-3">توضیحات</th></tr></thead>
+                    <tbody>${day.exercises.map((ex, i) => `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 text-center font-semibold text-indigo-400">${i + 1}</td><td class="p-3 font-medium">${ex.name}</td><td class="p-3 text-center">${ex.sets}</td><td class="p-3 text-gray-400">${ex.desc}</td></tr>`).join('')}</tbody>
+                </table>
+            `;
+        };
 
-function addEditorEventListeners() {
-    // Save button
-    document.getElementById('save-all-btn').addEventListener('click', saveCurrentAthlete);
-
-    // Delete athlete button
-    document.getElementById('delete-athlete-btn').addEventListener('click', deleteCurrentAthlete);
-    
-    // Tab switching
-    document.querySelectorAll('.day-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            const dayIndex = e.target.dataset.day;
-            document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('tab-active'));
-            e.target.classList.add('tab-active');
-            
-            document.querySelectorAll('.day-content').forEach(c => c.classList.add('hidden'));
-            document.getElementById(`day-content-${dayIndex}`).classList.remove('hidden');
+        document.querySelectorAll('.user-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.user-tab-btn').forEach(b => b.classList.remove('tab-active-user'));
+                btn.classList.add('tab-active-user');
+                renderTable(btn.dataset.index);
+            });
         });
-    });
 
-    // Add new exercise
-    document.querySelectorAll('.add-exercise-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const dayIndex = e.target.closest('button').dataset.day;
-            const athlete = db.athletes.find(a => a.id === currentAthleteId);
-            athlete.plan.workoutDays[dayIndex].exercises.push({ name: '', sets: '', desc: '' });
-            renderEditor(athlete); // Re-render the editor
-        });
-    });
-    
-    // Remove exercise
-     document.querySelectorAll('.remove-exercise-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const dayIndex = e.target.closest('button').dataset.day;
-            const exIndex = e.target.closest('button').dataset.ex;
-            const athlete = db.athletes.find(a => a.id === currentAthleteId);
-            athlete.plan.workoutDays[dayIndex].exercises.splice(exIndex, 1);
-            renderEditor(athlete);
-        });
-    });
-
-    // Add new day
-    document.getElementById('add-day-btn').addEventListener('click', () => {
-        const athlete = db.athletes.find(a => a.id === currentAthleteId);
-        const newDayNum = athlete.plan.workoutDays.length + 1;
-        athlete.plan.workoutDays.push({ day: `روز ${newDayNum}`, exercises: [] });
-        renderEditor(athlete);
-    });
-    
-    // Remove current day
-    document.getElementById('remove-day-btn').addEventListener('click', () => {
-       const activeTab = document.querySelector('.day-tab.tab-active');
-       if(!activeTab) {
-           alert("لطفا یک روز را برای حذف انتخاب کنید.");
-           return;
-       }
-       if (confirm("آیا از حذف این روز تمرینی مطمئن هستید؟")) {
-           const dayIndex = activeTab.dataset.day;
-           const athlete = db.athletes.find(a => a.id === currentAthleteId);
-           athlete.plan.workoutDays.splice(dayIndex, 1);
-           // After removing, select the first day or show welcome screen
-           if(athlete.plan.workoutDays.length > 0){
-               renderEditor(athlete);
-           } else {
-               showWelcomeScreen();
-           }
-       }
-    });
-
-}
-
-function saveCurrentAthlete() {
-    if (!currentAthleteId) return;
-
-    const athlete = db.athletes.find(a => a.id === currentAthleteId);
-    
-    // Update name
-    athlete.name = document.getElementById('athlete-name-input').value;
-    
-    // Update plan details
-    const plan = athlete.plan;
-    plan.startDate = document.getElementById('start-date').value;
-    plan.endDate = document.getElementById('end-date').value;
-    plan.instructions = document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== '');
-    plan.importantNotes = document.getElementById('important-notes-area').value.split('\n').filter(line => line.trim() !== '');
-
-    // Update exercises from input fields
-    document.querySelectorAll('.exercise-row input').forEach(input => {
-        const dayIndex = input.dataset.day;
-        const exIndex = input.dataset.ex;
-        const field = input.dataset.field;
-        if(plan.workoutDays[dayIndex] && plan.workoutDays[dayIndex].exercises[exIndex]){
-            plan.workoutDays[dayIndex].exercises[exIndex][field] = input.value;
+        if (workoutDays.length > 0) {
+            document.querySelector('.user-tab-btn').click();
         }
-    });
-
-    alert(`اطلاعات ${athlete.name} با موفقیت ذخیره شد.`);
-    renderAthleteList(); // Re-render list in case name changed
-}
-
-function deleteCurrentAthlete() {
-    if (!currentAthleteId) return;
-    if(confirm(`آیا از حذف شاگرد "${db.athletes.find(a => a.id === currentAthleteId).name}" مطمئن هستید؟`)){
-        db.athletes = db.athletes.filter(a => a.id !== currentAthleteId);
-        currentAthleteId = null;
-        renderAthleteList();
-        showWelcomeScreen();
+        
+        document.querySelectorAll('details').forEach((detail) => {
+            detail.addEventListener('toggle', () => {
+                const icon = detail.querySelector('.fa-chevron-down');
+                icon.style.transform = detail.open ? 'rotate(180deg)' : 'rotate(0deg)';
+            });
+        });
     }
-}
 
-function showWelcomeScreen(){
-    editorScreen.classList.add('hidden');
-    welcomeScreen.classList.remove('hidden');
-    currentAthleteId = null;
-    renderAthleteList();
-}
+    // =================================================================================
+    // --- ADMIN PANEL LOGIC ---
+    // =================================================================================
+    function renderAdminPanel() {
+        const adminStyles = `<style> .tab-active-admin { background-color: #4f46e5 !important; color: #ffffff !important; } .sidebar-scroll::-webkit-scrollbar { display: none; } .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; } </style>`;
+        document.head.insertAdjacentHTML('beforeend', adminStyles);
 
-// Add new athlete
-addAthleteBtn.addEventListener('click', () => {
-    const name = prompt("نام شاگرد جدید را وارد کنید:");
-    if (name) {
+        appContainer.innerHTML = `
+            <div class="relative min-h-screen md:flex">
+                <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-20 md:hidden hidden"></div>
+                <aside id="sidebar" class="sidebar bg-gray-800 text-white w-64 fixed inset-y-0 right-0 z-30 transform translate-x-full md:relative md:translate-x-0 flex-shrink-0">
+                    <div class="p-4 h-full flex flex-col">
+                        <div class="text-center mb-8 flex-shrink-0">
+                            <h1 class="text-xl font-bold main-gradient-text">پنل مدیریت باران</h1>
+                        </div>
+                        <h2 class="text-sm font-semibold text-gray-400 mb-2 uppercase flex-shrink-0">لیست شاگردان</h2>
+                        <div id="athlete-list" class="flex-grow overflow-y-auto sidebar-scroll space-y-2">
+                            <p class="text-gray-500">در حال بارگذاری...</p>
+                        </div>
+                        <button id="add-athlete-btn" class="btn btn-primary w-full mt-4 flex-shrink-0"><i class="fas fa-plus ml-2"></i>افزودن شاگرد</button>
+                    </div>
+                </aside>
+                <main id="main-content" class="flex-1 p-4 md:p-8">
+                    <div class="md:hidden flex justify-between items-center mb-4">
+                        <h1 class="text-lg font-bold main-gradient-text">پنل مدیریت</h1>
+                        <button id="menu-toggle-btn" class="text-2xl"><i class="fas fa-bars"></i></button>
+                    </div>
+                    <div id="welcome-screen" class="flex items-center justify-center h-full">
+                        <div class="text-center text-gray-500">
+                            <i class="fas fa-users text-6xl mb-4"></i>
+                            <h2 class="text-2xl font-bold">یک شاگرد را انتخاب کنید</h2>
+                            <p>برای مشاهده یا ویرایش برنامه، یک شاگرد را از لیست انتخاب کنید.</p>
+                        </div>
+                    </div>
+                    <div id="editor-screen" class="hidden"></div>
+                </main>
+            </div>
+        `;
+        listenForAthletes();
+        addAdminPanelGlobalListeners();
+    }
+
+    function renderAthleteList() {
+        const athleteListContainer = document.getElementById('athlete-list');
+        if(!athleteListContainer) return;
+
+        if (athletes.length === 0) {
+            athleteListContainer.innerHTML = `<p class="text-gray-500 text-center p-4">هنوز شاگردی اضافه نشده است.</p>`;
+            return;
+        }
+
+        athleteListContainer.innerHTML = athletes.map(athlete => `
+            <div data-id="${athlete.id}" class="athlete-item flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-700 ${athlete.id === currentAthleteId ? 'bg-indigo-600 text-white' : ''}">
+                <span class="font-semibold">${athlete.name}</span>
+                <i class="fas fa-chevron-left text-xs"></i>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.athlete-item').forEach(item => {
+            item.addEventListener('click', () => {
+                loadAthleteEditor(item.dataset.id);
+                document.getElementById('sidebar').classList.remove('sidebar-open');
+                document.getElementById('sidebar-overlay').classList.add('hidden');
+            });
+        });
+    }
+
+    async function renderEditor(athlete) {
+        document.getElementById('welcome-screen').classList.add('hidden');
+        const editorScreen = document.getElementById('editor-screen');
+        editorScreen.classList.remove('hidden');
+
+        const plan = athlete.plan;
+        let daysHtml = plan.workoutDays.map((day, dayIndex) => {
+            let exercisesHtml = day.exercises.map((ex, exIndex) => `
+                <tr class="exercise-row"><td class="p-2"><input type="text" class="input-field" value="${ex.name}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="name"></td><td class="p-2"><input type="text" class="input-field" value="${ex.sets}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="sets"></td><td class="p-2"><input type="text" class="input-field" value="${ex.desc}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="desc"></td><td class="p-2 text-center"><button class="btn btn-danger btn-sm px-3 py-1 remove-exercise-btn" data-day="${dayIndex}" data-ex="${exIndex}"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+            return `<div id="day-content-${dayIndex}" class="day-content ${dayIndex === 0 ? '' : 'hidden'}"><div class="overflow-x-auto"><table class="w-full text-right"><thead><tr><th class="p-2 w-2/5">حرکت</th><th class="p-2 w-1/5">ست</th><th class="p-2 w-2/5">توضیحات</th><th class="p-2">حذف</th></tr></thead><tbody>${exercisesHtml}</tbody></table></div><button class="btn btn-secondary mt-4 add-exercise-btn" data-day="${dayIndex}"><i class="fas fa-plus ml-2"></i>افزودن حرکت</button></div>`;
+        }).join('');
+        let tabsHtml = plan.workoutDays.map((day, index) => `<button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === 0 ? 'tab-active-admin' : ''}" data-day="${index}">${day.day}</button>`).join('');
+
+        editorScreen.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                 <h2 class="text-2xl font-bold">برنامه: <input type="text" id="athlete-name-input" class="bg-transparent border-b-2 border-gray-600 focus:border-indigo-500 outline-none w-full sm:w-auto" value="${athlete.name}"></h2>
+                 <div class="flex gap-2 flex-wrap"><button id="share-btn" class="btn btn-success flex-grow sm:flex-grow-0"><i class="fas fa-share-alt ml-2"></i>اشتراک</button><button id="save-all-btn" class="btn btn-primary flex-grow sm:flex-grow-0"><i class="fas fa-save ml-2"></i>ذخیره</button><button id="delete-athlete-btn" class="btn btn-danger flex-grow sm:flex-grow-0"><i class="fas fa-user-times ml-2"></i>حذف</button></div>
+            </div>
+            <div class="card p-6 mb-6"><div class="grid md:grid-cols-2 gap-4"><div><label class="block mb-2 font-semibold text-gray-400">تاریخ شروع</label><input type="text" id="start-date" class="input-field" value="${plan.startDate}"></div><div><label class="block mb-2 font-semibold text-gray-400">تاریخ پایان</label><input type="text" id="end-date" class="input-field" value="${plan.endDate}"></div></div></div>
+            <div class="card p-6 mb-6">
+                <div class="flex items-center gap-2 mb-4 border-b border-gray-700 pb-4 overflow-x-auto"><div id="tabs-container" class="flex items-center gap-2">${tabsHtml}</div><button id="add-day-btn" class="btn btn-secondary flex-shrink-0 px-3 py-2 mr-auto"><i class="fas fa-plus"></i></button><button id="remove-day-btn" class="btn btn-danger flex-shrink-0 px-3 py-2"><i class="fas fa-trash"></i></button></div>
+                <div id="days-content-container">${daysHtml}</div>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6"><div class="card p-6"><label class="block mb-2 font-bold text-purple-400">نکات و دستور‌العمل‌ها</label><textarea id="instructions-area" class="input-field" rows="5">${plan.instructions.join('\n')}</textarea></div><div class="card p-6"><label class="block mb-2 font-bold text-amber-400">نکات مهم</label><textarea id="important-notes-area" class="input-field" rows="5">${plan.importantNotes.join('\n')}</textarea></div></div>`;
+        addEditorEventListeners();
+    }
+
+    function loadAthleteEditor(id) {
+        const athlete = athletes.find(a => a.id === id);
+        if (athlete) {
+            currentAthleteId = id;
+            renderAthleteList();
+            renderEditor(athlete);
+        }
+    }
+
+    function addAdminPanelGlobalListeners() {
+        // Use event delegation for sidebar toggle to ensure it's always available
+        document.body.addEventListener('click', e => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (e.target.closest('#menu-toggle-btn')) {
+                sidebar?.classList.add('sidebar-open');
+                overlay?.classList.remove('hidden');
+            }
+            if (e.target.closest('#sidebar-overlay')) {
+                sidebar?.classList.remove('sidebar-open');
+                overlay?.classList.add('hidden');
+            }
+            if (e.target.closest('#add-athlete-btn')) {
+                const name = prompt("نام شاگرد جدید را وارد کنید:");
+                if (name && name.trim()) {
+                    addNewAthlete(name.trim());
+                }
+            }
+        });
+    }
+
+    function addEditorEventListeners() {
+        document.getElementById('save-all-btn').addEventListener('click', () => saveCurrentAthlete(true));
+        document.getElementById('delete-athlete-btn').addEventListener('click', deleteCurrentAthlete);
+        document.getElementById('share-btn').addEventListener('click', shareCurrentAthlete);
+        
+        const editorScreen = document.getElementById('editor-screen');
+
+        editorScreen.addEventListener('click', e => {
+            const target = e.target;
+            const dayTab = target.closest('.day-tab');
+            const addExerciseBtn = target.closest('.add-exercise-btn');
+            const removeExerciseBtn = target.closest('.remove-exercise-btn');
+            const addDayBtn = target.closest('#add-day-btn');
+            const removeDayBtn = target.closest('#remove-day-btn');
+
+            if (dayTab) {
+                const dayIndex = dayTab.dataset.day;
+                document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('tab-active-admin'));
+                dayTab.classList.add('tab-active-admin');
+                document.querySelectorAll('.day-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(`day-content-${dayIndex}`).classList.remove('hidden');
+            }
+            if (addExerciseBtn) {
+                const dayIndex = addExerciseBtn.dataset.day;
+                let athlete = getLocalAthlete();
+                athlete.plan.workoutDays[dayIndex].exercises.push({ name: '', sets: '', desc: '' });
+                renderEditor(athlete);
+            }
+            if (removeExerciseBtn) {
+                const dayIndex = removeExerciseBtn.dataset.day;
+                const exIndex = removeExerciseBtn.dataset.ex;
+                let athlete = getLocalAthlete();
+                athlete.plan.workoutDays[dayIndex].exercises.splice(exIndex, 1);
+                renderEditor(athlete);
+            }
+            if (addDayBtn) {
+                let athlete = getLocalAthlete();
+                athlete.plan.workoutDays.push({ day: `روز ${athlete.plan.workoutDays.length + 1}`, exercises: [] });
+                renderEditor(athlete);
+            }
+            if (removeDayBtn) {
+                const activeTab = document.querySelector('.day-tab.tab-active-admin');
+                if (!activeTab) { return; }
+                showConfirm("آیا از حذف این روز تمرینی مطمئن هستید؟", () => {
+                    const dayIndex = activeTab.dataset.day;
+                    let athlete = getLocalAthlete();
+                    athlete.plan.workoutDays.splice(dayIndex, 1);
+                    // Re-render editor with updated state
+                    renderEditor(athlete); 
+                });
+            }
+        });
+    }
+    
+    // --- FIRESTORE DATA OPERATIONS ---
+    
+    // Listen for real-time updates on athletes
+    function listenForAthletes() {
+        if (!db) return;
+        const athletesCollection = collection(db, "athletes");
+        const q = query(athletesCollection);
+        onSnapshot(q, (querySnapshot) => {
+            athletes = [];
+            querySnapshot.forEach((doc) => {
+                athletes.push({ id: doc.id, ...doc.data() });
+            });
+            console.log("Athletes loaded:", athletes);
+            renderAthleteList();
+            // If an athlete was selected, re-render the editor with fresh data
+            if(currentAthleteId) {
+                const currentData = athletes.find(a => a.id === currentAthleteId);
+                if(currentData) {
+                    renderEditor(currentData);
+                } else {
+                    // The selected athlete was deleted by another user
+                    showWelcomeScreen();
+                }
+            }
+        }, (error) => {
+            console.error("Error fetching athletes in real-time:", error);
+            showToast("خطا در دریافت اطلاعات. لطفاً صفحه را رفرش کنید.");
+        });
+    }
+
+    async function addNewAthlete(name) {
         const newAthlete = {
-            id: db.nextId++,
             name: name,
             plan: {
+                trainerName: "باران حیدری",
+                trainerPhone: "09184280519",
                 startDate: "",
                 endDate: "",
                 instructions: [],
@@ -428,16 +536,179 @@ addAthleteBtn.addEventListener('click', () => {
                 importantNotes: []
             }
         };
-        db.athletes.push(newAthlete);
-        loadAthleteEditor(newAthlete.id);
+        try {
+            const docRef = await addDoc(collection(db, "athletes"), newAthlete);
+            showToast(`شاگرد "${name}" با موفقیت اضافه شد.`);
+            loadAthleteEditor(docRef.id);
+        } catch (e) {
+            console.error("Error adding document: ", e);
+            showToast("خطا در افزودن شاگرد.");
+        }
     }
-});
+    
+    // Helper to get the current athlete's data from the local cache
+    function getLocalAthlete() {
+        if (!currentAthleteId) return null;
+        // Deep copy to avoid direct mutation before saving
+        return JSON.parse(JSON.stringify(athletes.find(a => a.id === currentAthleteId)));
+    }
+    
+    // Gathers data from the editor inputs
+    function getEditorData() {
+        const athlete = getLocalAthlete();
+        if(!athlete) return null;
 
+        athlete.name = document.getElementById('athlete-name-input').value;
+        const plan = athlete.plan;
+        plan.startDate = document.getElementById('start-date').value;
+        plan.endDate = document.getElementById('end-date').value;
+        plan.instructions = document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== '');
+        plan.importantNotes = document.getElementById('important-notes-area').value.split('\n').filter(line => line.trim() !== '');
+        
+        const newWorkoutDays = [];
+        document.querySelectorAll('.day-content').forEach((dayContent, dayIndex) => {
+            const dayTab = document.querySelector(`.day-tab[data-day="${dayIndex}"]`);
+            const dayName = dayTab ? dayTab.textContent : `روز ${dayIndex + 1}`;
+            const exercises = [];
+            dayContent.querySelectorAll('.exercise-row').forEach((row) => {
+                exercises.push({
+                    name: row.querySelector(`input[data-field="name"]`).value,
+                    sets: row.querySelector(`input[data-field="sets"]`).value,
+                    desc: row.querySelector(`input[data-field="desc"]`).value,
+                });
+            });
+            newWorkoutDays.push({day: dayName, exercises: exercises });
+        });
+        plan.workoutDays = newWorkoutDays;
+        
+        return athlete;
+    }
 
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
-    renderAthleteList();
-});
+    async function saveCurrentAthlete(showSuccessToast = false) {
+        if (!currentAthleteId) return null;
+        const saveBtn = document.getElementById('save-all-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>ذخیره سازی...';
+
+        const updatedData = getEditorData();
+        if(!updatedData) {
+            showToast("خطا: اطلاعات شاگرد یافت نشد.");
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره';
+            return;
+        }
+
+        try {
+            const athleteRef = doc(db, "athletes", currentAthleteId);
+            await setDoc(athleteRef, updatedData); // setDoc overwrites the entire document
+            if (showSuccessToast) {
+                showToast(`اطلاعات ${updatedData.name} با موفقیت ذخیره شد.`);
+            }
+            return updatedData;
+        } catch (e) {
+            console.error("Error updating document:", e);
+            showToast("خطا در ذخیره سازی اطلاعات.");
+            return null;
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره';
+        }
+    }
+    
+    function deleteCurrentAthlete() {
+        if (!currentAthleteId) return;
+        const athleteName = athletes.find(a => a.id === currentAthleteId)?.name;
+        showConfirm(`آیا از حذف شاگرد "${athleteName}" مطمئن هستید؟`, async () => {
+            try {
+                await deleteDoc(doc(db, "athletes", currentAthleteId));
+                showToast(`شاگرد "${athleteName}" حذف شد.`);
+                showWelcomeScreen();
+            } catch (e) {
+                console.error("Error deleting document:", e);
+                showToast("خطا در حذف شاگرد.");
+            }
+        });
+    }
+
+    function showWelcomeScreen(){
+        document.getElementById('editor-screen').classList.add('hidden');
+        document.getElementById('welcome-screen').classList.remove('hidden');
+        currentAthleteId = null;
+        renderAthleteList();
+    }
+
+    async function shareCurrentAthlete() {
+        const athlete = await saveCurrentAthlete(false); // Save latest changes before sharing
+        if (!athlete) {
+            showToast("ابتدا تغییرات را ذخیره کنید.");
+            return;
+        }
+        
+        const planData = { ...athlete.plan, athleteName: athlete.name };
+        const jsonString = JSON.stringify(planData);
+        // Using a more URL-safe Base64 encoding
+        const encodedData = btoa(encodeURIComponent(jsonString));
+        
+        const shareLink = `${window.location.origin}${window.location.pathname}?plan=${encodedData}`;
+        
+        const modal = document.getElementById('share-modal');
+        const linkInput = document.getElementById('share-link-input');
+        const copyBtn = document.getElementById('copy-link-btn');
+        const closeBtn = document.getElementById('close-modal-btn');
+
+        linkInput.value = shareLink;
+        modal.classList.remove('hidden');
+
+        copyBtn.onclick = () => {
+            linkInput.select();
+            document.execCommand('copy');
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
+        };
+
+        closeBtn.onclick = () => {
+            modal.classList.add('hidden');
+        };
+    }
+
+    // --- INITIALIZATION ---
+    // **FIXED**: Renamed this function to startApp to avoid conflict with Firebase's initializeApp
+    function startApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const planDataParam = urlParams.get('plan');
+
+        if (planDataParam) {
+            try {
+                const decodedJson = decodeURIComponent(atob(planDataParam));
+                const planData = JSON.parse(decodedJson);
+                renderUserView(planData);
+            } catch (error) {
+                console.error("Failed to parse plan data from URL:", error);
+                // Fallback to admin panel if URL data is corrupt
+                if (authReady) renderAdminPanel();
+            }
+        } else {
+            if (authReady) renderAdminPanel();
+        }
+    }
+
+    // Authenticate user anonymously and then start the app
+    if(auth) {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in.
+                console.log("User is authenticated:", user.uid);
+                authReady = true;
+                startApp(); // **FIXED**: Calling the renamed function here
+            } else {
+                // User is signed out. Try to sign in.
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Anonymous sign-in failed:", error);
+                    showToast("خطا در احراز هویت.");
+                });
+            }
+        });
+    }
 
 </script>
 </body>
