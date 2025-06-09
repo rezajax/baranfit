@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت مربی - باران حیدری</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Vazirmatn -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #111827;
+            color: #e5e7eb;
+        }
+        .main-gradient-text {
+            background: linear-gradient(to right, #a855f7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 1rem;
+        }
+        .input-field {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            width: 100%;
+            color: #e5e7eb;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .btn-secondary {
+            background-color: #374151;
+            color: #e5e7eb;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .btn-danger {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-danger:hover {
+             background-color: #b91c1c;
+        }
+        .tab-active {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+        }
+        /* Hide scrollbar for sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .sidebar-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="flex h-screen bg-gray-900">
+        <!-- Sidebar -->
+        <aside class="w-64 flex-shrink-0 bg-gray-800 p-4 flex flex-col">
+            <div class="text-center mb-8">
+                <h1 class="text-xl font-bold main-gradient-text">پنل مدیریت باران</h1>
+            </div>
+            <h2 class="text-sm font-semibold text-gray-400 mb-2 uppercase">لیست شاگردان</h2>
+            <div id="athlete-list" class="flex-grow overflow-y-auto sidebar-scroll space-y-2">
+                <!-- Athlete list will be populated here -->
+            </div>
+            <button id="add-athlete-btn" class="btn btn-primary w-full mt-4"><i class="fas fa-plus ml-2"></i>افزودن شاگرد</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
+            <div id="welcome-screen" class="flex items-center justify-center h-full">
+                <div class="text-center">
+                    <i class="fas fa-users text-6xl text-gray-600 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-400">یک شاگرد را انتخاب کنید</h2>
+                    <p class="text-gray-500">برای مشاهده یا ویرایش برنامه، یک شاگرد را از لیست انتخاب کنید یا یک شاگرد جدید اضافه کنید.</p>
+                </div>
+            </div>
+
+            <div id="editor-screen" class="hidden">
+                 <!-- Main Editor content will be injected here -->
+            </div>
+        </main>
+    </div>
+
+<script>
+// --- DATABASE SIMULATION ---
+// In a real app, this would be a database like Firebase.
+let db = {
+    athletes: [
+        {
+            id: 1,
+            name: "سپیده",
+            plan: {
+                startDate: "1403/10/04",
+                endDate: "1403/11/04",
+                instructions: [
+                    "گرم کردن در ابتدای تمرین: ۴ دقیقه گرم کردن عمومی بدن و ۳ دقیقه اجرای حرکات با وزنه بسیار سبک روی عضلاتی که قصد تمرین دادنشان را دارید.",
+                    "استراحت بین ست ها: 60 ثانیه",
+                    "استراحت بین حرکات: 90 ثانیه",
+                ],
+                workoutDays: [
+                    { day: "روز اول", exercises: [{ name: "جلو ران", sets: "2x12-2x10", desc: "N/A" }, { name: "جلو ران بارفیکس", sets: "3x15", desc: "N/A" }] },
+                    { day: "روز دوم", exercises: [{ name: "زیر بغل", sets: "3x15", desc: "N/A" }, { name: "شنا دیواری + قایقی", sets: "4x15/12", desc: "N/A" }] }
+                ],
+                importantNotes: [
+                    "با توجه به تعداد حرکات و ست‌ها، تمرین بدنسازی شما نهایتا باید ۷۰ دقیقه طول بکشد.",
+                    "در هر هفته تلاش کنید کمی سنگین‌تر وزنه بزنید."
+                ]
+            }
+        },
+        {
+            id: 2,
+            name: "مریم",
+            plan: {
+                startDate: "1403/11/01",
+                endDate: "1403/12/01",
+                instructions: ["گرم کردن 10 دقیقه"],
+                workoutDays: [
+                    { day: "روز A", exercises: [{ name: "اسکات", sets: "5x5", desc: "" }] }
+                ],
+                importantNotes: ["آب کافی بنوشید."]
+            }
+        }
+    ],
+    nextId: 3,
+};
+
+// --- DOM Elements ---
+const athleteListContainer = document.getElementById('athlete-list');
+const mainContent = document.getElementById('main-content');
+const welcomeScreen = document.getElementById('welcome-screen');
+const editorScreen = document.getElementById('editor-screen');
+const addAthleteBtn = document.getElementById('add-athlete-btn');
+
+let currentAthleteId = null;
+
+// --- RENDER FUNCTIONS ---
+
+function renderAthleteList() {
+    athleteListContainer.innerHTML = db.athletes.map(athlete => `
+        <div data-id="${athlete.id}" class="athlete-item flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-700 ${athlete.id === currentAthleteId ? 'bg-indigo-600 text-white' : ''}">
+            <span class="font-semibold">${athlete.name}</span>
+            <i class="fas fa-chevron-left text-xs"></i>
+        </div>
+    `).join('');
+
+    // Add event listeners to each item
+    document.querySelectorAll('.athlete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const id = parseInt(item.dataset.id);
+            loadAthleteEditor(id);
+        });
+    });
+}
+
+function renderEditor(athlete) {
+    welcomeScreen.classList.add('hidden');
+    editorScreen.classList.remove('hidden');
+
+    const plan = athlete.plan;
+
+    // Generate HTML for workout day tabs and tables
+    let daysHtml = plan.workoutDays.map((day, dayIndex) => {
+        let exercisesHtml = day.exercises.map((ex, exIndex) => `
+            <tr class="exercise-row">
+                <td class="p-2"><input type="text" class="input-field" value="${ex.name}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="name"></td>
+                <td class="p-2"><input type="text" class="input-field" value="${ex.sets}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="sets"></td>
+                <td class="p-2"><input type="text" class="input-field" value="${ex.desc}" data-day="${dayIndex}" data-ex="${exIndex}" data-field="desc"></td>
+                <td class="p-2 text-center">
+                    <button class="btn btn-danger btn-sm px-3 py-1 remove-exercise-btn" data-day="${dayIndex}" data-ex="${exIndex}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+
+        return `
+            <div id="day-content-${dayIndex}" class="day-content ${dayIndex === 0 ? '' : 'hidden'}">
+                <div class="table-responsive">
+                    <table class="w-full text-right">
+                        <thead>
+                           <tr>
+                                <th class="p-2 w-2/5">حرکت تمرینی</th>
+                                <th class="p-2 w-1/5">تعداد ست</th>
+                                <th class="p-2 w-2/5">توضیحات</th>
+                                <th class="p-2">حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>${exercisesHtml}</tbody>
+                    </table>
+                </div>
+                <button class="btn btn-secondary mt-4 add-exercise-btn" data-day="${dayIndex}"><i class="fas fa-plus ml-2"></i>افزودن حرکت</button>
+            </div>
+        `;
+    }).join('');
+
+    let tabsHtml = plan.workoutDays.map((day, index) => `
+        <button class="day-tab flex-shrink-0 px-4 py-2 rounded-md font-semibold ${index === 0 ? 'tab-active' : ''}" data-day="${index}">${day.day}</button>
+    `).join('');
+
+    // Main editor structure
+    editorScreen.innerHTML = `
+        <div class="flex justify-between items-center mb-6">
+             <h2 class="text-2xl font-bold">برنامه شاگرد: <input type="text" id="athlete-name-input" class="bg-transparent border-b-2 border-gray-600 focus:border-indigo-500 outline-none" value="${athlete.name}"></h2>
+             <div>
+                <button id="save-all-btn" class="btn btn-primary"><i class="fas fa-save ml-2"></i>ذخیره کل تغییرات</button>
+                <button id="delete-athlete-btn" class="btn btn-danger mr-2"><i class="fas fa-user-times ml-2"></i>حذف شاگرد</button>
+             </div>
+        </div>
+
+        <!-- General Info -->
+        <div class="card p-6 mb-6">
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-400">تاریخ شروع</label>
+                    <input type="text" id="start-date" class="input-field" value="${plan.startDate}">
+                </div>
+                 <div>
+                    <label class="block mb-2 font-semibold text-gray-400">تاریخ پایان</label>
+                    <input type="text" id="end-date" class="input-field" value="${plan.endDate}">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Workout Days -->
+        <div class="card p-6 mb-6">
+            <div class="flex items-center gap-2 mb-4 border-b border-gray-700 pb-4 overflow-x-auto">
+                <div id="tabs-container" class="flex items-center gap-2">
+                    ${tabsHtml}
+                </div>
+                <button id="add-day-btn" class="btn btn-secondary flex-shrink-0 px-3 py-2 ml-auto"><i class="fas fa-plus"></i></button>
+                 <button id="remove-day-btn" class="btn btn-danger flex-shrink-0 px-3 py-2"><i class="fas fa-trash"></i></button>
+            </div>
+            <div id="days-content-container">
+                ${daysHtml}
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="grid md:grid-cols-2 gap-6">
+             <div class="card p-6">
+                <label class="block mb-2 font-bold text-purple-400">نکات و دستور‌العمل‌ها</label>
+                <textarea id="instructions-area" class="input-field" rows="5">${plan.instructions.join('\n')}</textarea>
+            </div>
+             <div class="card p-6">
+                <label class="block mb-2 font-bold text-amber-400">نکات مهم</label>
+                <textarea id="important-notes-area" class="input-field" rows="5">${plan.importantNotes.join('\n')}</textarea>
+            </div>
+        </div>
+    `;
+    addEditorEventListeners();
+}
+
+// --- LOGIC & EVENT LISTENERS ---
+
+function loadAthleteEditor(id) {
+    const athlete = db.athletes.find(a => a.id === id);
+    if (athlete) {
+        currentAthleteId = id;
+        renderAthleteList(); // Re-render to highlight selection
+        renderEditor(athlete);
+    }
+}
+
+function addEditorEventListeners() {
+    // Save button
+    document.getElementById('save-all-btn').addEventListener('click', saveCurrentAthlete);
+
+    // Delete athlete button
+    document.getElementById('delete-athlete-btn').addEventListener('click', deleteCurrentAthlete);
+    
+    // Tab switching
+    document.querySelectorAll('.day-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const dayIndex = e.target.dataset.day;
+            document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('tab-active'));
+            e.target.classList.add('tab-active');
+            
+            document.querySelectorAll('.day-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`day-content-${dayIndex}`).classList.remove('hidden');
+        });
+    });
+
+    // Add new exercise
+    document.querySelectorAll('.add-exercise-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dayIndex = e.target.closest('button').dataset.day;
+            const athlete = db.athletes.find(a => a.id === currentAthleteId);
+            athlete.plan.workoutDays[dayIndex].exercises.push({ name: '', sets: '', desc: '' });
+            renderEditor(athlete); // Re-render the editor
+        });
+    });
+    
+    // Remove exercise
+     document.querySelectorAll('.remove-exercise-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dayIndex = e.target.closest('button').dataset.day;
+            const exIndex = e.target.closest('button').dataset.ex;
+            const athlete = db.athletes.find(a => a.id === currentAthleteId);
+            athlete.plan.workoutDays[dayIndex].exercises.splice(exIndex, 1);
+            renderEditor(athlete);
+        });
+    });
+
+    // Add new day
+    document.getElementById('add-day-btn').addEventListener('click', () => {
+        const athlete = db.athletes.find(a => a.id === currentAthleteId);
+        const newDayNum = athlete.plan.workoutDays.length + 1;
+        athlete.plan.workoutDays.push({ day: `روز ${newDayNum}`, exercises: [] });
+        renderEditor(athlete);
+    });
+    
+    // Remove current day
+    document.getElementById('remove-day-btn').addEventListener('click', () => {
+       const activeTab = document.querySelector('.day-tab.tab-active');
+       if(!activeTab) {
+           alert("لطفا یک روز را برای حذف انتخاب کنید.");
+           return;
+       }
+       if (confirm("آیا از حذف این روز تمرینی مطمئن هستید؟")) {
+           const dayIndex = activeTab.dataset.day;
+           const athlete = db.athletes.find(a => a.id === currentAthleteId);
+           athlete.plan.workoutDays.splice(dayIndex, 1);
+           // After removing, select the first day or show welcome screen
+           if(athlete.plan.workoutDays.length > 0){
+               renderEditor(athlete);
+           } else {
+               showWelcomeScreen();
+           }
+       }
+    });
+
+}
+
+function saveCurrentAthlete() {
+    if (!currentAthleteId) return;
+
+    const athlete = db.athletes.find(a => a.id === currentAthleteId);
+    
+    // Update name
+    athlete.name = document.getElementById('athlete-name-input').value;
+    
+    // Update plan details
+    const plan = athlete.plan;
+    plan.startDate = document.getElementById('start-date').value;
+    plan.endDate = document.getElementById('end-date').value;
+    plan.instructions = document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== '');
+    plan.importantNotes = document.getElementById('important-notes-area').value.split('\n').filter(line => line.trim() !== '');
+
+    // Update exercises from input fields
+    document.querySelectorAll('.exercise-row input').forEach(input => {
+        const dayIndex = input.dataset.day;
+        const exIndex = input.dataset.ex;
+        const field = input.dataset.field;
+        if(plan.workoutDays[dayIndex] && plan.workoutDays[dayIndex].exercises[exIndex]){
+            plan.workoutDays[dayIndex].exercises[exIndex][field] = input.value;
+        }
+    });
+
+    alert(`اطلاعات ${athlete.name} با موفقیت ذخیره شد.`);
+    renderAthleteList(); // Re-render list in case name changed
+}
+
+function deleteCurrentAthlete() {
+    if (!currentAthleteId) return;
+    if(confirm(`آیا از حذف شاگرد "${db.athletes.find(a => a.id === currentAthleteId).name}" مطمئن هستید؟`)){
+        db.athletes = db.athletes.filter(a => a.id !== currentAthleteId);
+        currentAthleteId = null;
+        renderAthleteList();
+        showWelcomeScreen();
+    }
+}
+
+function showWelcomeScreen(){
+    editorScreen.classList.add('hidden');
+    welcomeScreen.classList.remove('hidden');
+    currentAthleteId = null;
+    renderAthleteList();
+}
+
+// Add new athlete
+addAthleteBtn.addEventListener('click', () => {
+    const name = prompt("نام شاگرد جدید را وارد کنید:");
+    if (name) {
+        const newAthlete = {
+            id: db.nextId++,
+            name: name,
+            plan: {
+                startDate: "",
+                endDate: "",
+                instructions: [],
+                workoutDays: [{ day: "روز اول", exercises: [] }],
+                importantNotes: []
+            }
+        };
+        db.athletes.push(newAthlete);
+        loadAthleteEditor(newAthlete.id);
+    }
+});
+
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    renderAthleteList();
+});
+
+</script>
+</body>
+</html>
