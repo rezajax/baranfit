@@ -283,10 +283,10 @@
                 </div>
                 <div class="grid md:grid-cols-2 gap-8 mb-8">
                     <div class="card p-6 shadow-lg">
-                        <details open><summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-purple-400"><i class="fas fa-clipboard-list ml-2"></i>نکات و دستور‌العمل‌ها</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary><ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-purple-400">${(instructions || []).map(item => `<li>${item}</li>`).join('')}</ul></details>
+                        <details open><summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-purple-400"><i class="fas fa-clipboard-list ml-2"></i>نکات و دستور‌العمل‌ها</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary><ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-purple-400">${instructions.map(item => `<li>${item}</li>`).join('')}</ul></details>
                     </div>
                     <div class="card p-6 shadow-lg">
-                        <details open><summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-amber-400"><i class="fas fa-exclamation-triangle ml-2"></i>نکات مهم</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary><ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-amber-400">${(importantNotes || []).map(item => `<li>${item}</li>`).join('')}</ul></details>
+                        <details open><summary class="cursor-pointer flex justify-between items-center"><h3 class="text-lg font-bold text-amber-400"><i class="fas fa-exclamation-triangle ml-2"></i>نکات مهم</h3><i class="fas fa-chevron-down transition-transform duration-300 transform rotate-180"></i></summary><ul class="mt-4 space-y-3 text-gray-300 pr-4 border-r-2 border-amber-400">${importantNotes.map(item => `<li>${item}</li>`).join('')}</ul></details>
                     </div>
                 </div>
                 <footer class="text-center mt-12 text-gray-400">
@@ -299,10 +299,9 @@
         const tabsContainer = document.getElementById('user-tabs-container');
         const tableContainer = document.getElementById('user-workout-table-container');
 
-        tabsContainer.innerHTML = (workoutDays || []).map((day, index) => `<button data-index="${index}" class="user-tab-btn flex-shrink-0 px-4 py-2 text-sm font-semibold text-gray-300 rounded-full transition-all duration-300 ease-in-out hover:bg-gray-700">${day.day}</button>`).join('');
+        tabsContainer.innerHTML = workoutDays.map((day, index) => `<button data-index="${index}" class="user-tab-btn flex-shrink-0 px-4 py-2 text-sm font-semibold text-gray-300 rounded-full transition-all duration-300 ease-in-out hover:bg-gray-700">${day.day}</button>`).join('');
         const renderTable = (dayIndex) => {
-            const day = (workoutDays || [])[dayIndex];
-            if (!day) return;
+            const day = workoutDays[dayIndex];
             tableContainer.innerHTML = `<table class="w-full text-right"><thead class="border-b-2 border-gray-600"><tr><th class="p-3 text-center">#</th><th class="p-3">حرکت</th><th class="p-3 text-center">ست</th><th class="p-3">توضیحات</th></tr></thead><tbody>${(day.exercises || []).map((ex, i) => `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 text-center font-semibold text-indigo-400">${i + 1}</td><td class="p-3 font-medium">${ex.name}</td><td class="p-3 text-center">${ex.sets}</td><td class="p-3 text-gray-400">${ex.desc}</td></tr>`).join('')}</tbody></table>`;
         };
         document.querySelectorAll('.user-tab-btn').forEach(btn => {
@@ -312,10 +311,10 @@
                 renderTable(btn.dataset.index);
             });
         });
-        if ((workoutDays || []).length > 0) document.querySelector('.user-tab-btn')?.click();
+        if (workoutDays.length > 0) document.querySelector('.user-tab-btn').click();
         document.querySelectorAll('details').forEach((detail) => {
             detail.addEventListener('toggle', () => {
-                detail.querySelector('.fa-chevron-down')?.classList.toggle('rotate-180');
+                detail.querySelector('.fa-chevron-down').classList.toggle('rotate-180');
             });
         });
     }
@@ -363,8 +362,8 @@
         document.querySelectorAll('.athlete-item').forEach(item => {
             item.addEventListener('click', () => {
                 loadAthleteEditor(item.dataset.id);
-                document.getElementById('sidebar')?.classList.remove('sidebar-open');
-                document.getElementById('sidebar-overlay')?.classList.add('hidden');
+                document.getElementById('sidebar').classList.remove('sidebar-open');
+                document.getElementById('sidebar-overlay').classList.add('hidden');
             });
         });
     }
@@ -402,7 +401,9 @@
         if (athlete) { currentAthleteId = id; renderAthleteList(); renderEditor(athlete); }
     }
 
+    // FIXED: Combined and centralized event listeners to prevent duplication
     function setupAdminEventListeners() {
+        // Listener for static elements or delegated from body
         document.body.addEventListener('click', e => {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -415,18 +416,16 @@
             if (e.target.closest('#logout-btn')) { signOut(auth).catch(err => console.error("Logout failed:", err)); }
         });
 
+        // Delegated listener for the main content area which is dynamic
         const mainContent = document.getElementById('main-content');
         if (mainContent) {
             mainContent.addEventListener('click', e => {
+                // Top-level buttons
                 if (e.target.closest('#save-all-btn')) { saveCurrentAthlete(true); return; }
                 if (e.target.closest('#delete-athlete-btn')) { deleteCurrentAthlete(); return; }
                 if (e.target.closest('#share-btn')) { shareCurrentAthlete(); return; }
-                
-                // --- FIXED: Correct state management for dynamic buttons ---
-                const athleteIndex = athletes.findIndex(a => a.id === currentAthleteId);
-                if (athleteIndex === -1) return; // No athlete selected, do nothing
-                const athlete = athletes[athleteIndex];
 
+                // Editor-internal buttons
                 const dayTab = e.target.closest('.day-tab');
                 const addExerciseBtn = e.target.closest('.add-exercise-btn');
                 const removeExerciseBtn = e.target.closest('.remove-exercise-btn');
@@ -442,8 +441,9 @@
                 }
                 
                 if (addExerciseBtn) {
-                    const dayIndex = parseInt(addExerciseBtn.dataset.day, 10);
-                    if (athlete.plan.workoutDays?.[dayIndex]) {
+                    const dayIndex = addExerciseBtn.dataset.day;
+                    let athlete = getLocalAthlete();
+                    if (athlete && athlete.plan.workoutDays[dayIndex]) {
                         if (!athlete.plan.workoutDays[dayIndex].exercises) {
                             athlete.plan.workoutDays[dayIndex].exercises = [];
                         }
@@ -453,26 +453,31 @@
                 }
 
                 if (removeExerciseBtn) {
-                    const dayIndex = parseInt(removeExerciseBtn.dataset.day, 10);
-                    const exIndex = parseInt(removeExerciseBtn.dataset.ex, 10);
-                     if (athlete.plan.workoutDays?.[dayIndex]?.exercises) {
+                    const dayIndex = removeExerciseBtn.dataset.day;
+                    const exIndex = removeExerciseBtn.dataset.ex;
+                    let athlete = getLocalAthlete();
+                     if (athlete && athlete.plan.workoutDays[dayIndex]?.exercises) {
                         athlete.plan.workoutDays[dayIndex].exercises.splice(exIndex, 1);
                         renderEditor(athlete);
                     }
                 }
 
                 if (addDayBtn) {
-                    if (!athlete.plan.workoutDays) athlete.plan.workoutDays = [];
-                    athlete.plan.workoutDays.push({ day: `روز ${athlete.plan.workoutDays.length + 1}`, exercises: [] });
-                    renderEditor(athlete);
+                    let athlete = getLocalAthlete();
+                    if (athlete && athlete.plan) {
+                        if (!athlete.plan.workoutDays) athlete.plan.workoutDays = [];
+                        athlete.plan.workoutDays.push({ day: `روز ${athlete.plan.workoutDays.length + 1}`, exercises: [] });
+                        renderEditor(athlete);
+                    }
                 }
                 
                 if (removeDayBtn) {
                     const activeTab = document.querySelector('.day-tab.tab-active-admin');
                     if (!activeTab) return;
                     showConfirm("آیا از حذف این روز تمرینی مطمئن هستید؟", () => {
-                        const dayIndex = parseInt(activeTab.dataset.day, 10);
-                        if (athlete.plan.workoutDays) {
+                        const dayIndex = activeTab.dataset.day;
+                        let athlete = getLocalAthlete();
+                        if (athlete && athlete.plan.workoutDays) {
                             athlete.plan.workoutDays.splice(dayIndex, 1);
                             renderEditor(athlete);
                         }
@@ -506,76 +511,43 @@
         } catch (e) { console.error("Error adding document: ", e); showToast("خطا در افزودن شاگرد."); }
     }
     
+    function getLocalAthlete() { return currentAthleteId ? JSON.parse(JSON.stringify(athletes.find(a => a.id === currentAthleteId))) : null; }
+    
     function getEditorData() {
-        // Now directly gets data from the DOM, no need for local copy
-        if (!currentAthleteId) return null;
-
-        const originalAthlete = athletes.find(a => a.id === currentAthleteId);
-        if (!originalAthlete) return null;
-
-        // Create a new object to avoid unintended mutations, but populate it with live form data
-        const updatedAthleteData = {
-            ...originalAthlete, // carry over ID and other non-form properties
-            name: document.getElementById('athlete-name-input').value,
-            plan: {
-                ...originalAthlete.plan, // carry over trainerName etc.
-                startDate: document.getElementById('start-date').value,
-                endDate: document.getElementById('end-date').value,
-                instructions: document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== ''),
-                importantNotes: document.getElementById('important-notes-area').value.split('\n').filter(line => line.trim() !== ''),
-                workoutDays: []
-            }
-        };
-
+        const athlete = getLocalAthlete();
+        if(!athlete) return null;
+        athlete.name = document.getElementById('athlete-name-input').value;
+        const plan = athlete.plan;
+        plan.startDate = document.getElementById('start-date').value;
+        plan.endDate = document.getElementById('end-date').value;
+        plan.instructions = document.getElementById('instructions-area').value.split('\n').filter(line => line.trim() !== '');
+        plan.importantNotes = document.getElementById('important-notes-area').value.split('\n').filter(line => line.trim() !== '');
+        const newWorkoutDays = [];
         document.querySelectorAll('.day-content').forEach((dayContent, dayIndex) => {
             const dayTab = document.querySelector(`.day-tab[data-day="${dayIndex}"]`);
             const exercises = [];
             dayContent.querySelectorAll('.exercise-row').forEach((row) => {
-                exercises.push({ 
-                    name: row.querySelector(`input[data-field="name"]`).value, 
-                    sets: row.querySelector(`input[data-field="sets"]`).value, 
-                    desc: row.querySelector(`input[data-field="desc"]`).value 
-                });
+                exercises.push({ name: row.querySelector(`input[data-field="name"]`).value, sets: row.querySelector(`input[data-field="sets"]`).value, desc: row.querySelector(`input[data-field="desc"]`).value });
             });
-            updatedAthleteData.plan.workoutDays.push({
-                day: dayTab ? dayTab.textContent : `روز ${dayIndex + 1}`, 
-                exercises: exercises 
-            });
+            newWorkoutDays.push({day: dayTab ? dayTab.textContent : `روز ${dayIndex + 1}`, exercises: exercises });
         });
-
-        return updatedAthleteData;
+        plan.workoutDays = newWorkoutDays;
+        return athlete;
     }
-
 
     async function saveCurrentAthlete(showSuccessToast = false) {
         if (!currentAthleteId) return null;
         const saveBtn = document.getElementById('save-all-btn');
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>ذخیره سازی...';
-        
         const updatedData = getEditorData();
-        if(!updatedData) { 
-            showToast("خطا: اطلاعات شاگرد یافت نشد."); 
-            saveBtn.disabled = false; 
-            saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره'; 
-            return; 
-        }
-
-        // Remove the id from the data object before saving to Firestore
-        const { id, ...dataToSave } = updatedData;
-
+        if(!updatedData) { showToast("خطا: اطلاعات شاگرد یافت نشد."); saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره'; return; }
         try {
-            await setDoc(doc(db, "athletes", currentAthleteId), dataToSave);
+            await setDoc(doc(db, "athletes", currentAthleteId), updatedData);
             if (showSuccessToast) showToast(`اطلاعات ${updatedData.name} با موفقیت ذخیره شد.`);
             return updatedData;
-        } catch (e) { 
-            console.error("Error updating document:", e); 
-            showToast("خطا در ذخیره سازی اطلاعات."); 
-            return null;
-        } finally { 
-            saveBtn.disabled = false; 
-            saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره'; 
-        }
+        } catch (e) { console.error("Error updating document:", e); showToast("خطا در ذخیره سازی اطلاعات."); return null;
+        } finally { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>ذخیره'; }
     }
     
     function deleteCurrentAthlete() {
@@ -623,15 +595,10 @@
                 renderUserView(planData);
             } catch (error) {
                 console.error("Failed to parse plan data from URL:", error);
-                renderLoginView(); 
+                renderLoginView(); // Fallback to login if parsing fails
             }
         } else {
-            // This is an admin trying to access the panel
-            if (auth.currentUser && auth.currentUser.email === ADMIN_EMAIL) {
-                renderAdminPanel();
-            } else {
-                renderLoginView();
-            }
+            renderAdminPanel();
         }
     }
 
@@ -639,7 +606,6 @@
         onAuthStateChanged(auth, (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('plan')) {
-                // If a plan link is accessed, show it regardless of auth state
                 startApp();
                 return;
             }
